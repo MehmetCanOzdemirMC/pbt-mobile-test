@@ -16,15 +16,26 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.pbt.mobiletest",
+      "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
+      "permissions": [
+        "INTERNET",
+        "ACCESS_NETWORK_STATE"
+      ],
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "9e6a074f-dc92-406d-a8f7-9a3a81add453"
+      }
     }
   }
 }
