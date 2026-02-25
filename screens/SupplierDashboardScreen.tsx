@@ -3,6 +3,7 @@ import { createMaterialTopTabNavigator } from '@react-navigation/material-top-ta
 import InventoryScreen from './supplier/InventoryScreen';
 import SalesScreen from './supplier/SalesScreen';
 import DiscountsScreen from './supplier/DiscountsScreen';
+import { useTheme } from '../context/ThemeContext';
 
 const Tab = createMaterialTopTabNavigator();
 
@@ -11,13 +12,15 @@ const Tab = createMaterialTopTabNavigator();
  * Contains: Inventory, Sales (incoming orders), Discounts
  */
 export default function SupplierDashboardScreen() {
+  const { theme } = useTheme();
+
   return (
     <Tab.Navigator
       screenOptions={{
-        tabBarActiveTintColor: '#007AFF',
-        tabBarInactiveTintColor: '#999',
+        tabBarActiveTintColor: theme.primary,
+        tabBarInactiveTintColor: theme.textDim,
         tabBarIndicatorStyle: {
-          backgroundColor: '#007AFF',
+          backgroundColor: theme.primary,
           height: 3,
         },
         tabBarLabelStyle: {
@@ -26,11 +29,11 @@ export default function SupplierDashboardScreen() {
           textTransform: 'none',
         },
         tabBarStyle: {
-          backgroundColor: '#fff',
+          backgroundColor: theme.backgroundCard,
           elevation: 0,
           shadowOpacity: 0,
           borderBottomWidth: 1,
-          borderBottomColor: '#e0e0e0',
+          borderBottomColor: theme.border,
         },
       }}
     >

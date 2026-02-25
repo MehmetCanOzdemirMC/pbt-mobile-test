@@ -11,6 +11,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { auth, db } from '../config/firebase';
 import { collection, query, where, onSnapshot, or, orderBy } from 'firebase/firestore';
+import { useTheme } from '../context/ThemeContext';
 
 interface Order {
   id: string;
@@ -46,6 +47,7 @@ const STATUS_COLORS: { [key: string]: string } = {
 };
 
 export default function OrdersScreen() {
+  const { theme } = useTheme();
   const navigation = useNavigation();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -121,13 +123,13 @@ export default function OrdersScreen() {
 
     return (
       <TouchableOpacity
-        style={styles.orderCard}
+        style={[styles.orderCard, { backgroundColor: theme.backgroundCard }]}
         onPress={() => navigation.navigate('OrderDetail' as never, { orderId: item.id } as never)}
       >
         {/* Header */}
         <View style={styles.orderHeader}>
           <View style={styles.orderHeaderLeft}>
-            <Text style={styles.orderId}>{item.orderId}</Text>
+            <Text style={[styles.orderId, { color: theme.textPrimary }]}>{item.orderId}</Text>
             <View style={[styles.roleBadge, { backgroundColor: role === 'BUYER' ? '#2196F3' : '#FF9800' }]}>
               <Text style={styles.roleBadgeText}>
                 {role === 'BUYER' ? '🛍️ Alıcı' : '📦 Satıcı'}
@@ -141,20 +143,20 @@ export default function OrdersScreen() {
 
         {/* Details */}
         <View style={styles.orderDetails}>
-          <Text style={styles.orderDetailText}>
+          <Text style={[styles.orderDetailText, { color: theme.textSecondary }]}>
             {role === 'BUYER'
               ? `📍 Tedarikçi: ${item.supplierName}`
               : `👤 Alıcı: ${item.buyerEmail}`
             }
           </Text>
-          <Text style={styles.orderDetailText}>
+          <Text style={[styles.orderDetailText, { color: theme.textSecondary }]}>
             📦 {item.items.length} ürün
           </Text>
-          <Text style={styles.orderDetailText}>
+          <Text style={[styles.orderDetailText, { color: theme.textSecondary }]}>
             💰 Toplam: ${item.finalTotal.toLocaleString()}
           </Text>
           {item.createdAt && (
-            <Text style={styles.orderDate}>
+            <Text style={[styles.orderDate, { color: theme.textDim }]}>
               📅 {formatDate(item.createdAt)}
             </Text>
           )}
@@ -165,46 +167,78 @@ export default function OrdersScreen() {
 
   if (loading) {
     return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
-        <Text style={styles.loadingText}>Siparişler yükleniyor...</Text>
+      <View style={[styles.centerContainer, { backgroundColor: theme.background }]}>
+        <ActivityIndicator size="large" color={theme.primary} />
+        <Text style={[styles.loadingText, { color: theme.textSecondary }]}>Siparişler yükleniyor...</Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       {/* Filter Tabs */}
-      <View style={styles.filterContainer}>
+      <View style={[styles.filterContainer, { backgroundColor: theme.backgroundCard, borderBottomColor: theme.border }]}>
         <TouchableOpacity
-          style={[styles.filterTab, filter === 'ALL' && styles.filterTabActive]}
+          style={[
+            styles.filterTab,
+            { backgroundColor: theme.background },
+            filter === 'ALL' && [styles.filterTabActive, { backgroundColor: theme.primary }]
+          ]}
           onPress={() => setFilter('ALL')}
         >
-          <Text style={[styles.filterTabText, filter === 'ALL' && styles.filterTabTextActive]}>
+          <Text style={[
+            styles.filterTabText,
+            { color: theme.textSecondary },
+            filter === 'ALL' && styles.filterTabTextActive
+          ]}>
             Tümü ({orders.length})
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.filterTab, filter === 'NEGOTIATING' && styles.filterTabActive]}
+          style={[
+            styles.filterTab,
+            { backgroundColor: theme.background },
+            filter === 'NEGOTIATING' && [styles.filterTabActive, { backgroundColor: theme.primary }]
+          ]}
           onPress={() => setFilter('NEGOTIATING')}
         >
-          <Text style={[styles.filterTabText, filter === 'NEGOTIATING' && styles.filterTabTextActive]}>
+          <Text style={[
+            styles.filterTabText,
+            { color: theme.textSecondary },
+            filter === 'NEGOTIATING' && styles.filterTabTextActive
+          ]}>
             Görüşülüyor
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.filterTab, filter === 'PENDING_PAYMENT' && styles.filterTabActive]}
+          style={[
+            styles.filterTab,
+            { backgroundColor: theme.background },
+            filter === 'PENDING_PAYMENT' && [styles.filterTabActive, { backgroundColor: theme.primary }]
+          ]}
           onPress={() => setFilter('PENDING_PAYMENT')}
         >
-          <Text style={[styles.filterTabText, filter === 'PENDING_PAYMENT' && styles.filterTabTextActive]}>
+          <Text style={[
+            styles.filterTabText,
+            { color: theme.textSecondary },
+            filter === 'PENDING_PAYMENT' && styles.filterTabTextActive
+          ]}>
             Bekliyor
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.filterTab, filter === 'COMPLETED' && styles.filterTabActive]}
+          style={[
+            styles.filterTab,
+            { backgroundColor: theme.background },
+            filter === 'COMPLETED' && [styles.filterTabActive, { backgroundColor: theme.primary }]
+          ]}
           onPress={() => setFilter('COMPLETED')}
         >
-          <Text style={[styles.filterTabText, filter === 'COMPLETED' && styles.filterTabTextActive]}>
+          <Text style={[
+            styles.filterTabText,
+            { color: theme.textSecondary },
+            filter === 'COMPLETED' && styles.filterTabTextActive
+          ]}>
             Tamamlandı
           </Text>
         </TouchableOpacity>
@@ -214,8 +248,8 @@ export default function OrdersScreen() {
       {filteredOrders.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyIcon}>📦</Text>
-          <Text style={styles.emptyTitle}>Sipariş Bulunamadı</Text>
-          <Text style={styles.emptyText}>
+          <Text style={[styles.emptyTitle, { color: theme.textPrimary }]}>Sipariş Bulunamadı</Text>
+          <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
             {filter === 'ALL'
               ? 'Henüz hiç siparişiniz yok'
               : `${STATUS_LABELS[filter]} durumunda sipariş yok`

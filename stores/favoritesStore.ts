@@ -40,7 +40,8 @@ export const useFavoritesStore = create<FavoritesState>((set, get) => ({
     if (!user) return;
 
     try {
-      const favoriteItem = {
+      // Filter out undefined values (Firestore doesn't accept undefined)
+      const favoriteItem: any = {
         id: stone.id,
         stoneId: stone.stoneId,
         carat: stone.carat,
@@ -50,9 +51,13 @@ export const useFavoritesStore = create<FavoritesState>((set, get) => ({
         totalPrice: stone.totalPrice,
         pricePerCarat: stone.pricePerCarat,
         supplierId: stone.supplierId,
-        supplierName: stone.supplierName,
         addedAt: Date.now(),
       };
+
+      // Only add supplierName if it exists
+      if (stone.supplierName) {
+        favoriteItem.supplierName = stone.supplierName;
+      }
 
       // Save to Firestore
       const favoritesRef = doc(db, 'favorites', user.uid);

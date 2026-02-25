@@ -16,6 +16,7 @@ import { auth, db } from '../config/firebase';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { useMessagingStore } from '../stores/messagingStore';
+import { useTheme } from '../context/ThemeContext';
 
 interface OrderItem {
   stoneId: string;
@@ -62,6 +63,7 @@ interface Order {
 export default function OrderDetailScreen() {
   const route = useRoute();
   const navigation = useNavigation();
+  const { theme } = useTheme();
   const { orderId } = route.params as { orderId: string };
 
   const [order, setOrder] = useState<Order | null>(null);
@@ -576,17 +578,17 @@ export default function OrderDetailScreen() {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
-        <Text style={styles.loadingText}>Sipariş yükleniyor...</Text>
+      <View style={[styles.loadingContainer, { backgroundColor: theme.background }]}>
+        <ActivityIndicator size="large" color={theme.primary} />
+        <Text style={[styles.loadingText, { color: theme.textSecondary }]}>Sipariş yükleniyor...</Text>
       </View>
     );
   }
 
   if (!order) {
     return (
-      <View style={styles.emptyContainer}>
-        <Text style={styles.emptyText}>Sipariş bulunamadı</Text>
+      <View style={[styles.emptyContainer, { backgroundColor: theme.background }]}>
+        <Text style={[styles.emptyText, { color: theme.textSecondary }]}>Sipariş bulunamadı</Text>
       </View>
     );
   }
@@ -596,25 +598,25 @@ export default function OrderDetailScreen() {
   const statusInfo = getStatusLabel(order.status);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       <ScrollView style={styles.scrollView}>
         {/* Order Header */}
-        <View style={[styles.header, { borderLeftColor: statusInfo.color }]}>
+        <View style={[styles.header, { borderLeftColor: statusInfo.color, backgroundColor: theme.backgroundCard, borderBottomColor: theme.border }]}>
           <View style={styles.headerTop}>
-            <Text style={styles.orderId}>📦 {order.orderId}</Text>
+            <Text style={[styles.orderId, { color: theme.textPrimary }]}>📦 {order.orderId}</Text>
             <View style={[styles.statusBadge, { backgroundColor: statusInfo.bgColor }]}>
               <Text style={[styles.statusText, { color: statusInfo.color }]}>
                 {statusInfo.text}
               </Text>
             </View>
           </View>
-          <Text style={styles.orderDate}>{formatDate(order.createdAt)}</Text>
+          <Text style={[styles.orderDate, { color: theme.textSecondary }]}>{formatDate(order.createdAt)}</Text>
         </View>
 
         {/* Summary */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Özet</Text>
-          <View style={styles.summaryBox}>
+        <View style={[styles.section, { backgroundColor: theme.backgroundCard }]}>
+          <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Özet</Text>
+          <View style={[styles.summaryBox, { backgroundColor: theme.background }]}>
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Ürün Sayısı:</Text>
               <Text style={styles.summaryValue}>{order.items.length} taş</Text>

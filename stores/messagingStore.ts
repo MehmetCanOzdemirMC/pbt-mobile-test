@@ -45,6 +45,7 @@ export interface Conversation {
   id: string;
   participants: string[];
   participantNames: { [key: string]: string };
+  participantPhotos: { [key: string]: string | null };
   lastMessage: string;
   lastMessageTime: number;
   unreadCount: number;
@@ -55,15 +56,22 @@ interface MessagingState {
   messages: { [conversationId: string]: Message[] };
   loading: boolean;
   activeConversationId: string | null;
+  conversationsUnsubscribe: (() => void) | null;
+  messagesLimit: { [conversationId: string]: number };
+  loadingMore: { [conversationId: string]: boolean };
+  hasMoreMessages: { [conversationId: string]: boolean };
 
   // Actions
-  loadConversations: () => Promise<void>;
+  loadConversations: () => void;
+  stopListeningToConversations: () => void;
   loadMessages: (conversationId: string) => (() => void) | undefined;
+  loadMoreMessages: (conversationId: string) => Promise<void>;
   sendMessage: (conversationId: string, text: string, attachment?: any) => Promise<void>;
   createConversation: (otherUserId: string, otherUserName: string) => Promise<string>;
   setActiveConversation: (conversationId: string | null) => void;
   startConversation: (recipientId: string, recipientRole: string, recipientName: string) => Promise<string>;
   sendMessageById: (conversationId: string, content: any) => Promise<void>;
+  markConversationAsRead: (conversationId: string) => Promise<void>;
 }
 
 export const useMessagingStore = create<MessagingState>((set, get) => ({
@@ -71,35 +79,47 @@ export const useMessagingStore = create<MessagingState>((set, get) => ({
   messages: {},
   loading: false,
   activeConversationId: null,
+  conversationsUnsubscribe: null,
+  messagesLimit: {},
+  loadingMore: {},
+  hasMoreMessages: {},
 
-  // Load user's conversations
-  loadConversations: async () => {
+  // Load user's conversations with real-time listener
+  loadConversations: () => {
     const user = auth.currentUser;
     if (!user) return;
 
-    try {
-      set({ loading: true });
+    // Stop existing listener if any
+    const currentUnsubscribe = get().conversationsUnsubscribe;
+    if (currentUnsubscribe) {
+      currentUnsubscribe();
+    }
 
-      const conversationsRef = collection(db, 'conversations');
-      const q = query(
-        conversationsRef,
-        where('participantIds', 'array-contains', user.uid), // Use participantIds (web format)
-        limit(50)
-      );
+    set({ loading: true });
 
-      const snapshot = await getDocs(q);
-      console.log('Conversations found:', snapshot.size);
+    const conversationsRef = collection(db, 'conversations');
+    const q = query(
+      conversationsRef,
+      where('participantIds', 'array-contains', user.uid),
+      limit(50)
+    );
+
+    // Set up real-time listener
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      console.log('🔄 Conversations snapshot updated, size:', snapshot.size);
       const conversationsData: Conversation[] = [];
 
       snapshot.forEach((doc) => {
         const data = doc.data();
 
-        // Extract participant names from web format
+        // Extract participant names and photos from web format
         const participantNames: { [key: string]: string } = {};
+        const participantPhotos: { [key: string]: string | null } = {};
         if (data.participants && Array.isArray(data.participants)) {
           data.participants.forEach((p: any) => {
             if (p.userId && p.displayName) {
               participantNames[p.userId] = p.displayName;
+              participantPhotos[p.userId] = p.photoURL || null;
             }
           });
         }
@@ -110,16 +130,28 @@ export const useMessagingStore = create<MessagingState>((set, get) => ({
           lastMessageText = data.lastMessage;
         } else if (data.lastMessage && typeof data.lastMessage === 'object') {
           // If lastMessage is an object, extract content/text field
-          lastMessageText = data.lastMessage.content || data.lastMessage.text || '';
+          lastMessageText = data.lastMessage.content?.body || data.lastMessage.content || data.lastMessage.text || '';
+        }
+
+        // Calculate unreadCount for current user
+        const unreadCount = data.unreadCount?.[user.uid] || 0;
+
+        // Use lastMessageAt (web format) with fallback to lastMessageTime
+        let lastMessageTime = 0;
+        if (data.lastMessageAt?.toMillis) {
+          lastMessageTime = data.lastMessageAt.toMillis();
+        } else if (data.lastMessageTime?.toMillis) {
+          lastMessageTime = data.lastMessageTime.toMillis();
         }
 
         conversationsData.push({
           id: doc.id,
           participants: data.participantIds || [],
           participantNames,
+          participantPhotos,
           lastMessage: lastMessageText,
-          lastMessageTime: data.lastMessageTime?.toMillis() || 0,
-          unreadCount: 0,
+          lastMessageTime,
+          unreadCount,
         });
       });
 
@@ -139,13 +171,24 @@ export const useMessagingStore = create<MessagingState>((set, get) => ({
         }
       });
 
-      console.log(`Conversations: ${conversationsData.length} total, ${uniqueConversations.length} unique`);
+      console.log(`✅ Conversations updated: ${conversationsData.length} total, ${uniqueConversations.length} unique`);
 
-      set({ conversations: uniqueConversations });
-    } catch (error) {
-      console.error('Error loading conversations:', error);
-    } finally {
+      set({ conversations: uniqueConversations, loading: false });
+    }, (error) => {
+      console.error('Error in conversations listener:', error);
       set({ loading: false });
+    });
+
+    // Store unsubscribe function
+    set({ conversationsUnsubscribe: unsubscribe });
+  },
+
+  // Stop listening to conversations
+  stopListeningToConversations: () => {
+    const unsubscribe = get().conversationsUnsubscribe;
+    if (unsubscribe) {
+      unsubscribe();
+      set({ conversationsUnsubscribe: null });
     }
   },
 
@@ -154,13 +197,23 @@ export const useMessagingStore = create<MessagingState>((set, get) => ({
     const user = auth.currentUser;
     if (!user) return;
 
+    // Initialize limit to 20 messages for better performance
+    const currentLimit = get().messagesLimit[conversationId] || 20;
+
+    set((state) => ({
+      messagesLimit: {
+        ...state.messagesLimit,
+        [conversationId]: currentLimit
+      }
+    }));
+
     // Use 'messages' collection (not subcollection) to match web app
     const messagesRef = collection(db, 'messages');
     // Remove orderBy to avoid composite index requirement
     const q = query(
       messagesRef,
       where('conversationId', '==', conversationId),
-      limit(100)
+      limit(currentLimit)
     );
 
     // Set up real-time listener
@@ -253,22 +306,24 @@ export const useMessagingStore = create<MessagingState>((set, get) => ({
       // Sort by createdAt (client-side) - oldest first
       messagesData.sort((a, b) => a.createdAt - b.createdAt);
 
+      // Check if there might be more messages (if we got exactly the limit)
+      const hasMore = messagesData.length >= currentLimit;
+
       // Debug: Show first and last message timestamps
       if (messagesData.length > 0) {
         console.log('First message (oldest):', new Date(messagesData[0].createdAt).toLocaleString(), messagesData[0].text?.substring(0, 30));
         console.log('Last message (newest):', new Date(messagesData[messagesData.length - 1].createdAt).toLocaleString(), messagesData[messagesData.length - 1].text?.substring(0, 30));
-
-        // Debug: Show last 5 messages with timestamps to identify the problematic ones
-        console.log('\n=== LAST 5 MESSAGES ===');
-        messagesData.slice(-5).forEach((msg, idx) => {
-          console.log(`[${idx}] ${new Date(msg.createdAt).toLocaleString()} (${msg.createdAt}) - ${msg.text?.substring(0, 40)}`);
-        });
+        console.log(`📊 Loaded ${messagesData.length}/${currentLimit} messages. Has more: ${hasMore}`);
       }
 
       set((state) => ({
         messages: {
           ...state.messages,
           [conversationId]: messagesData,
+        },
+        hasMoreMessages: {
+          ...state.hasMoreMessages,
+          [conversationId]: hasMore,
         },
       }));
     });
@@ -279,6 +334,148 @@ export const useMessagingStore = create<MessagingState>((set, get) => ({
         unsubscribe();
       }
     };
+  },
+
+  // Load more messages (increase limit and reload)
+  loadMoreMessages: async (conversationId: string) => {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const currentLimit = get().messagesLimit[conversationId] || 20;
+    const isLoadingMore = get().loadingMore[conversationId];
+
+    // Prevent multiple simultaneous loads
+    if (isLoadingMore) {
+      console.log('⏳ Already loading more messages...');
+      return;
+    }
+
+    console.log(`📥 Loading more messages. Current: ${currentLimit}, New: ${currentLimit + 20}`);
+
+    // Set loading state
+    set((state) => ({
+      loadingMore: {
+        ...state.loadingMore,
+        [conversationId]: true,
+      },
+    }));
+
+    try {
+      const newLimit = currentLimit + 20;
+
+      // Update the limit
+      set((state) => ({
+        messagesLimit: {
+          ...state.messagesLimit,
+          [conversationId]: newLimit,
+        },
+      }));
+
+      // Fetch messages with new limit
+      const messagesRef = collection(db, 'messages');
+      const q = query(
+        messagesRef,
+        where('conversationId', '==', conversationId),
+        limit(newLimit)
+      );
+
+      const snapshot = await getDocs(q);
+      const messagesData: Message[] = [];
+
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+
+        // Extract text content safely (same logic as loadMessages)
+        let textContent = '';
+        if (typeof data.content === 'string') {
+          textContent = data.content;
+        } else if (typeof data.text === 'string') {
+          textContent = data.text;
+        } else if (data.content && typeof data.content === 'object') {
+          if (data.content.type === 'file') {
+            textContent = `📎 ${data.content.fileName || 'Dosya'}`;
+          } else if (data.content.type === 'image') {
+            textContent = data.content.body || '🖼️ Resim';
+          } else if (data.content.type === 'order') {
+            textContent = data.content.body || '📦 Sipariş';
+          } else if (data.content.type === 'inventory_card') {
+            textContent = `📦 ${data.content.body || 'Stok Kartı'}`;
+          } else if (data.content.type === 'trade_proposal') {
+            textContent = `💰 ${data.content.body || 'Ticaret Teklifi'}`;
+          } else {
+            textContent = data.content.body || data.content.text || '';
+          }
+        } else if (data.text && typeof data.text === 'object') {
+          textContent = data.text.body || data.text.text || '';
+        }
+
+        // Extract timestamp
+        let timestamp = 0;
+        if (data.timestamp?.toMillis) {
+          timestamp = data.timestamp.toMillis();
+        } else if (data.createdAt?.toMillis) {
+          timestamp = data.createdAt.toMillis();
+        } else if (typeof data.timestamp === 'number') {
+          timestamp = data.timestamp;
+        } else if (typeof data.createdAt === 'number') {
+          timestamp = data.createdAt;
+        }
+
+        // Get sender name
+        let senderDisplayName = data.senderName || '';
+        if (!senderDisplayName && data.senderId) {
+          const currentConversation = get().conversations.find(c => c.id === conversationId);
+          if (currentConversation && currentConversation.participantNames) {
+            senderDisplayName = currentConversation.participantNames[data.senderId] || 'Unknown';
+          } else {
+            senderDisplayName = 'Unknown';
+          }
+        }
+
+        messagesData.push({
+          id: doc.id,
+          conversationId,
+          senderId: data.senderId || '',
+          senderName: senderDisplayName || 'Unknown',
+          text: textContent,
+          createdAt: timestamp,
+          read: data.read || false,
+          content: typeof data.content === 'object' ? data.content : undefined,
+        });
+      });
+
+      // Sort by createdAt - oldest first
+      messagesData.sort((a, b) => a.createdAt - b.createdAt);
+
+      // Check if there are more messages
+      const hasMore = messagesData.length >= newLimit;
+
+      console.log(`✅ Loaded ${messagesData.length} messages (limit: ${newLimit}). Has more: ${hasMore}`);
+
+      // Update messages and hasMoreMessages state
+      set((state) => ({
+        messages: {
+          ...state.messages,
+          [conversationId]: messagesData,
+        },
+        hasMoreMessages: {
+          ...state.hasMoreMessages,
+          [conversationId]: hasMore,
+        },
+        loadingMore: {
+          ...state.loadingMore,
+          [conversationId]: false,
+        },
+      }));
+    } catch (error) {
+      console.error('❌ Error loading more messages:', error);
+      set((state) => ({
+        loadingMore: {
+          ...state.loadingMore,
+          [conversationId]: false,
+        },
+      }));
+    }
   },
 
   // Send a message
@@ -352,20 +549,39 @@ export const useMessagingStore = create<MessagingState>((set, get) => ({
 
       console.log('✅ [messagingStore] Message created with ID:', messageDoc.id);
 
-      // Update conversation's last message
+      // Get conversation to find receiver
       const conversationRef = doc(db, 'conversations', conversationId);
-      await updateDoc(conversationRef, {
-        lastMessage: {
-          content,
-          senderId: user.uid,
-          senderRole,
-          timestamp: Timestamp.now()
-        },
-        lastMessageAt: Timestamp.now(),
-        updatedAt: Timestamp.now()
-      });
+      const conversationSnap = await getDoc(conversationRef);
 
-      console.log('✅ [messagingStore] Conversation lastMessage updated');
+      if (conversationSnap.exists()) {
+        const conversationData = conversationSnap.data();
+        const participantIds = conversationData.participantIds || [];
+
+        // Find receiver (the other participant)
+        const receiverId = participantIds.find((id: string) => id !== user.uid);
+
+        // Update conversation: lastMessage + increment receiver's unreadCount
+        const updates: any = {
+          lastMessage: {
+            content,
+            senderId: user.uid,
+            senderRole,
+            timestamp: Timestamp.now()
+          },
+          lastMessageAt: Timestamp.now(),
+          updatedAt: Timestamp.now()
+        };
+
+        // Increment receiver's unreadCount
+        if (receiverId) {
+          const currentUnreadCount = conversationData.unreadCount?.[receiverId] || 0;
+          updates[`unreadCount.${receiverId}`] = currentUnreadCount + 1;
+          console.log(`📬 [messagingStore] Incrementing unreadCount for ${receiverId}: ${currentUnreadCount} -> ${currentUnreadCount + 1}`);
+        }
+
+        await updateDoc(conversationRef, updates);
+        console.log('✅ [messagingStore] Conversation updated with lastMessage and unreadCount');
+      }
 
     } catch (error) {
       console.error('Error sending message:', error);
@@ -509,18 +725,25 @@ export const useMessagingStore = create<MessagingState>((set, get) => ({
       const userData = userDoc.data();
       const currentUserName = userData?.name || userData?.email || 'Unknown';
       const currentUserRole = userData?.role || 'verifiedRetailer';
+      const currentUserPhoto = userData?.photoURL || null;
+
+      // Get recipient user's data for photoURL
+      const recipientDoc = await getDoc(doc(db, 'users', recipientId));
+      const recipientData = recipientDoc.data();
+      const recipientPhoto = recipientData?.photoURL || null;
 
       console.log('[Mobile] 👤 Current user data:', {
         name: currentUserName,
-        role: currentUserRole
+        role: currentUserRole,
+        photoURL: currentUserPhoto
       });
 
       const conversationData = {
         type: 'direct',
         participantIds: participants,
         participants: [
-          { userId: user.uid, displayName: currentUserName, role: currentUserRole },
-          { userId: recipientId, displayName: recipientName, role: recipientRole }
+          { userId: user.uid, displayName: currentUserName, role: currentUserRole, photoURL: currentUserPhoto },
+          { userId: recipientId, displayName: recipientName, role: recipientRole, photoURL: recipientPhoto }
         ],
         status: 'active',
         lastMessage: '',
@@ -649,8 +872,11 @@ export const useMessagingStore = create<MessagingState>((set, get) => ({
 
       console.log('[Mobile] ✅ Message created in Firestore');
 
-      // Update conversation's last message
-      await updateDoc(conversationRef, {
+      // Find receiver (the other participant)
+      const receiverId = conversationData.participantIds?.find((id: string) => id !== user.uid);
+
+      // Update conversation: lastMessage + increment receiver's unreadCount
+      const updates: any = {
         lastMessage: {
           senderId: user.uid,
           senderRole,
@@ -659,15 +885,72 @@ export const useMessagingStore = create<MessagingState>((set, get) => ({
         },
         lastMessageAt: Timestamp.now(),
         updatedAt: Timestamp.now()
-      });
+      };
 
-      console.log('[Mobile] ✅ Conversation updated with last message');
+      // Increment receiver's unreadCount
+      if (receiverId) {
+        const currentUnreadCount = conversationData.unreadCount?.[receiverId] || 0;
+        updates[`unreadCount.${receiverId}`] = currentUnreadCount + 1;
+        console.log(`[Mobile] 📬 Incrementing unreadCount for ${receiverId}: ${currentUnreadCount} -> ${currentUnreadCount + 1}`);
+      }
+
+      await updateDoc(conversationRef, updates);
+      console.log('[Mobile] ✅ Conversation updated with lastMessage and unreadCount');
       console.log('[Mobile] 🎉 Message sent successfully to conversation:', conversationId);
     } catch (error: any) {
       console.error('❌ [Mobile] Error sending message by ID:', error);
       console.error('❌ Error code:', error.code);
       console.error('❌ Error message:', error.message);
       throw error;
+    }
+  },
+
+  // Mark conversation as read (reset unreadCount for current user)
+  markConversationAsRead: async (conversationId: string) => {
+    const user = auth.currentUser;
+    if (!user) {
+      console.log('⚠️ [Mobile] markConversationAsRead: No user logged in');
+      return;
+    }
+
+    try {
+      console.log('📖 [Mobile] Marking conversation as read:', {
+        conversationId,
+        userId: user.uid
+      });
+
+      const conversationRef = doc(db, 'conversations', conversationId);
+      const conversationSnap = await getDoc(conversationRef);
+
+      if (!conversationSnap.exists()) {
+        console.error('❌ Conversation not found:', conversationId);
+        return;
+      }
+
+      const data = conversationSnap.data();
+      const currentUnreadCount = data.unreadCount?.[user.uid] || 0;
+
+      console.log('📊 [Mobile] Current unreadCount:', {
+        conversationId,
+        userId: user.uid,
+        currentUnreadCount,
+        allUnreadCounts: data.unreadCount
+      });
+
+      // Only update if there are unread messages
+      if (currentUnreadCount > 0) {
+        await updateDoc(conversationRef, {
+          [`unreadCount.${user.uid}`]: 0
+        });
+
+        console.log('✅ [Mobile] Conversation marked as read - updated from', currentUnreadCount, 'to 0');
+      } else {
+        console.log('ℹ️ [Mobile] No unread messages to mark (already 0)');
+      }
+    } catch (error: any) {
+      console.error('❌ [Mobile] Error marking conversation as read:', error);
+      console.error('Error code:', error.code);
+      console.error('Error message:', error.message);
     }
   },
 }));

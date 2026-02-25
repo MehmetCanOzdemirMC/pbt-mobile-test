@@ -14,6 +14,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useRoute } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMessagingStore, Message } from '../stores/messagingStore';
 import { auth, db, storage } from '../config/firebase';
 import { collection, query, where, onSnapshot, or, doc, getDoc } from 'firebase/firestore';
@@ -21,6 +22,8 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import OrderCard from '../components/OrderCard';
+import ScreenWrapper from '../components/ScreenWrapper';
+import { useTheme } from '../context/ThemeContext';
 
 interface Order {
   id: string;
@@ -40,14 +43,25 @@ interface Order {
 }
 
 export default function ConversationScreen() {
+  const { theme } = useTheme();
   const route = useRoute();
   const { conversationId } = route.params as { conversationId: string };
+  const insets = useSafeAreaInsets();
 
-  const { messages, loadMessages, sendMessage } = useMessagingStore();
+  const {
+    messages,
+    loadMessages,
+    loadMoreMessages,
+    sendMessage,
+    markConversationAsRead,
+    hasMoreMessages,
+    loadingMore
+  } = useMessagingStore();
   const [messageText, setMessageText] = useState('');
   const [orders, setOrders] = useState<Order[]>([]);
   const [uploading, setUploading] = useState(false);
   const [otherParticipantId, setOtherParticipantId] = useState<string | null>(null);
+  const [otherParticipantData, setOtherParticipantData] = useState<any>(null);
   const flatListRef = useRef<FlatList>(null);
 
   const conversationMessages = messages[conversationId] || [];
@@ -75,6 +89,27 @@ export default function ConversationScreen() {
           });
 
           setOtherParticipantId(otherUserId || null);
+
+          // Fetch other participant's user data (including photoURL)
+          if (otherUserId) {
+            try {
+              const userDoc = await getDoc(doc(db, 'users', otherUserId));
+              if (userDoc.exists()) {
+                const userData = userDoc.data();
+                setOtherParticipantData({
+                  name: userData.name || 'Unknown',
+                  surname: userData.surname || '',
+                  photoURL: userData.photoURL || null,
+                  role: userData.role || 'user'
+                });
+              }
+            } catch (error) {
+              console.error('[ConversationScreen] Error loading user data:', error);
+            }
+          }
+
+          // Mark conversation as read when opened
+          markConversationAsRead(conversationId);
         }
       } catch (error) {
         console.error('[ConversationScreen] Error loading conversation:', error);
@@ -157,21 +192,10 @@ export default function ConversationScreen() {
     return unsubscribe;
   }, [currentUserId, otherParticipantId]);
 
+  // Update message count reference
   useEffect(() => {
-    // Only auto-scroll when NEW messages arrive (count increases)
-    // Don't scroll on re-sorts or updates to existing messages
-    const currentCount = conversationMessages.length;
-    const prevCount = prevMessageCountRef.current;
-
-    if (currentCount > prevCount && currentCount > 0) {
-      console.log('📩 New message arrived, scrolling to bottom');
-      setTimeout(() => {
-        flatListRef.current?.scrollToEnd({ animated: true });
-      }, 100);
-    }
-
-    prevMessageCountRef.current = currentCount;
-  }, [conversationMessages.length]); // Only trigger on count change
+    prevMessageCountRef.current = conversationMessages.length;
+  }, [conversationMessages.length]);
 
   const handleSend = async () => {
     if (!messageText.trim()) return;
@@ -393,17 +417,20 @@ export default function ConversationScreen() {
         ]}>
           <View style={[
             styles.messageBubble,
-            isCurrentUser ? styles.messageBubbleRight : styles.messageBubbleLeft
+            isCurrentUser
+              ? [styles.messageBubbleRight, { backgroundColor: theme.primary }]
+              : [styles.messageBubbleLeft, { backgroundColor: theme.backgroundCard }]
           ]}>
             <Text style={[
               styles.messageText,
-              isCurrentUser ? styles.messageTextRight : styles.messageTextLeft
+              isCurrentUser ? styles.messageTextRight : { color: theme.textPrimary }
             ]}>
               {item.content?.body || messageText}
             </Text>
           </View>
           <Text style={[
             styles.messageTime,
+            { color: theme.textDim },
             isCurrentUser ? styles.messageTimeRight : styles.messageTimeLeft
           ]}>
             {timeStr}
@@ -423,12 +450,14 @@ export default function ConversationScreen() {
         isCurrentUser ? styles.messageContainerRight : styles.messageContainerLeft
       ]}>
         {!isCurrentUser && (
-          <Text style={styles.senderName}>{senderName}</Text>
+          <Text style={[styles.senderName, { color: theme.textSecondary }]}>{senderName}</Text>
         )}
 
         <View style={[
           styles.messageBubble,
-          isCurrentUser ? styles.messageBubbleRight : styles.messageBubbleLeft
+          isCurrentUser
+            ? [styles.messageBubbleRight, { backgroundColor: theme.primary }]
+            : [styles.messageBubbleLeft, { backgroundColor: theme.backgroundCard }]
         ]}>
           {/* Image message */}
           {messageType === 'image' && imageUrl && (
@@ -448,7 +477,7 @@ export default function ConversationScreen() {
               <Text style={styles.fileIcon}>📎</Text>
               <Text style={[
                 styles.fileName,
-                isCurrentUser ? styles.fileNameRight : styles.fileNameLeft
+                isCurrentUser ? styles.fileNameRight : { color: theme.textPrimary }
               ]}>
                 {fileName || 'File'}
               </Text>
@@ -459,7 +488,7 @@ export default function ConversationScreen() {
           {messageText && messageType === 'text' && (
             <Text style={[
               styles.messageText,
-              isCurrentUser ? styles.messageTextRight : styles.messageTextLeft
+              isCurrentUser ? styles.messageTextRight : { color: theme.textPrimary }
             ]}>
               {messageText}
             </Text>
@@ -468,6 +497,7 @@ export default function ConversationScreen() {
 
         <Text style={[
           styles.messageTime,
+          { color: theme.textDim },
           isCurrentUser ? styles.messageTimeRight : styles.messageTimeLeft
         ]}>
           {timeStr}
@@ -477,40 +507,104 @@ export default function ConversationScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-    >
+    <ScreenWrapper>
+      <KeyboardAvoidingView
+        style={[styles.container, { backgroundColor: theme.background }]}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 60}
+      >
+      {/* Chat Header with profile photo */}
+      {otherParticipantData && (
+        <View style={[styles.chatHeader, { backgroundColor: theme.backgroundCard, borderBottomColor: theme.border }]}>
+          {otherParticipantData.photoURL ? (
+            <Image
+              source={{ uri: otherParticipantData.photoURL }}
+              style={styles.headerAvatar}
+            />
+          ) : (
+            <View style={[styles.headerAvatar, { backgroundColor: theme.primary }]}>
+              <Text style={styles.headerAvatarText}>
+                {(otherParticipantData.name || 'U').charAt(0).toUpperCase()}
+              </Text>
+            </View>
+          )}
+          <View style={styles.headerInfo}>
+            <Text style={[styles.headerName, { color: theme.textPrimary }]}>
+              {otherParticipantData.name} {otherParticipantData.surname}
+            </Text>
+            <Text style={[styles.headerStatus, { color: theme.success }]}>Online</Text>
+          </View>
+        </View>
+      )}
+
       <FlatList
         ref={flatListRef}
         data={conversationMessages}
         renderItem={renderMessage}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.messagesList}
+        onContentSizeChange={() => {
+          // Only auto-scroll on first load or when new message arrives
+          // Don't scroll when loading more old messages
+          const currentCount = conversationMessages.length;
+          const prevCount = prevMessageCountRef.current;
+          const isLoadingMore = loadingMore[conversationId];
+
+          if (currentCount > 0 && prevCount === 0) {
+            // First load - scroll to bottom immediately
+            flatListRef.current?.scrollToEnd({ animated: false });
+          } else if (currentCount > prevCount && !isLoadingMore) {
+            // New message arrived (not loading more) - scroll to bottom
+            flatListRef.current?.scrollToEnd({ animated: true });
+          }
+          // If isLoadingMore = true, don't scroll (user is loading old messages)
+        }}
         ListHeaderComponent={
           <>
+            {/* Load More Button - show at top if there are more messages */}
+            {hasMoreMessages[conversationId] && conversationMessages.length > 0 && (
+              <View style={styles.loadMoreContainer}>
+                <TouchableOpacity
+                  style={[styles.loadMoreButton, { backgroundColor: theme.primary + '20' }]}
+                  onPress={() => loadMoreMessages(conversationId)}
+                  disabled={loadingMore[conversationId]}
+                >
+                  {loadingMore[conversationId] ? (
+                    <>
+                      <ActivityIndicator size="small" color={theme.primary} />
+                      <Text style={[styles.loadMoreText, { color: theme.primary }]}>Yükleniyor...</Text>
+                    </>
+                  ) : (
+                    <Text style={[styles.loadMoreText, { color: theme.primary }]}>⬆️ Eski Mesajları Yükle</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            )}
+
             {/* Empty messages prompt - show ONLY if no messages */}
             {conversationMessages.length === 0 && (
               <View style={styles.emptyContainer}>
-                <Text style={styles.emptyText}>Henüz mesaj yok</Text>
-                <Text style={styles.emptySubtext}>İlk mesajı gönderin</Text>
+                <Text style={[styles.emptyText, { color: theme.textSecondary }]}>Henüz mesaj yok</Text>
+                <Text style={[styles.emptySubtext, { color: theme.textDim }]}>İlk mesajı gönderin</Text>
               </View>
             )}
           </>
         }
       />
 
-      <View style={styles.inputContainer}>
+      <View style={[
+        styles.inputContainer,
+        { backgroundColor: theme.backgroundCard, borderTopColor: theme.border, paddingBottom: Math.max(insets.bottom, 8) }
+      ]}>
         {uploading && (
-          <View style={styles.uploadingOverlay}>
-            <ActivityIndicator size="large" color="#007AFF" />
-            <Text style={styles.uploadingText}>Yükleniyor...</Text>
+          <View style={[styles.uploadingOverlay, { backgroundColor: theme.backgroundCard + 'F0' }]}>
+            <ActivityIndicator size="large" color={theme.primary} />
+            <Text style={[styles.uploadingText, { color: theme.primary }]}>Yükleniyor...</Text>
           </View>
         )}
 
         <TouchableOpacity
-          style={styles.attachButton}
+          style={[styles.attachButton, { backgroundColor: theme.background }]}
           onPress={handleAttachment}
           disabled={uploading}
         >
@@ -518,8 +612,9 @@ export default function ConversationScreen() {
         </TouchableOpacity>
 
         <TextInput
-          style={styles.input}
+          style={[styles.input, { backgroundColor: theme.background, color: theme.textPrimary }]}
           placeholder="Mesajınızı yazın..."
+          placeholderTextColor={theme.textDim}
           value={messageText}
           onChangeText={setMessageText}
           multiline
@@ -530,6 +625,7 @@ export default function ConversationScreen() {
         <TouchableOpacity
           style={[
             styles.sendButton,
+            { backgroundColor: theme.primary },
             (!messageText.trim() || uploading) && styles.sendButtonDisabled
           ]}
           onPress={handleSend}
@@ -538,7 +634,8 @@ export default function ConversationScreen() {
           <Text style={styles.sendButtonText}>📤</Text>
         </TouchableOpacity>
       </View>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </ScreenWrapper>
   );
 }
 
@@ -547,8 +644,61 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
+  chatHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  headerAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#007AFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  headerAvatarText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  headerInfo: {
+    flex: 1,
+  },
+  headerName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+  },
+  headerStatus: {
+    fontSize: 12,
+    color: '#34C759',
+    marginTop: 2,
+  },
   messagesList: {
     padding: 16,
+  },
+  loadMoreContainer: {
+    alignItems: 'center',
+    marginVertical: 12,
+  },
+  loadMoreButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f0f7ff',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+    gap: 8,
+  },
+  loadMoreText: {
+    color: '#007AFF',
+    fontSize: 14,
+    fontWeight: '600',
   },
   ordersContainer: {
     marginBottom: 16,

@@ -9,6 +9,7 @@ import {
   Modal,
   Platform,
 } from 'react-native';
+import { useTheme } from '../context/ThemeContext';
 
 export interface Filters {
   shape: string[];
@@ -43,6 +44,7 @@ const SORT_OPTIONS = [
 
 const FilterSheet = forwardRef<FilterSheetRef, FilterSheetProps>(
   ({ filters, onApplyFilters }, ref) => {
+    const { theme } = useTheme();
     const [visible, setVisible] = React.useState(false);
     const [localFilters, setLocalFilters] = React.useState<Filters>(filters);
 
@@ -88,15 +90,15 @@ const FilterSheet = forwardRef<FilterSheetRef, FilterSheetProps>(
         presentationStyle="fullScreen"
         onRequestClose={() => setVisible(false)}
       >
-        <View style={styles.container}>
-          <View style={styles.header}>
-            <Text style={styles.headerTitle}>Filtreler</Text>
+        <View style={[styles.container, { backgroundColor: theme.background }]}>
+          <View style={[styles.header, { borderBottomColor: theme.border }]}>
+            <Text style={[styles.headerTitle, { color: theme.textPrimary }]}>Filtreler</Text>
             <View style={styles.headerButtons}>
               <TouchableOpacity onPress={handleReset} style={styles.resetButton}>
                 <Text style={styles.resetButtonText}>Temizle</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => setVisible(false)} style={styles.closeButton}>
-                <Text style={styles.closeButtonText}>✕</Text>
+              <TouchableOpacity onPress={() => setVisible(false)} style={[styles.closeButton, { backgroundColor: theme.backgroundCard }]}>
+                <Text style={[styles.closeButtonText, { color: theme.textSecondary }]}>✕</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -108,19 +110,21 @@ const FilterSheet = forwardRef<FilterSheetRef, FilterSheetProps>(
           >
             {/* Sort */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Sıralama</Text>
+              <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Sıralama</Text>
               <View style={styles.sortOptions}>
                 {SORT_OPTIONS.map(option => (
                   <TouchableOpacity
                     key={option.value}
                     style={[
                       styles.sortOption,
-                      localFilters.sortBy === option.value && styles.sortOptionActive
+                      { backgroundColor: theme.backgroundCard, borderColor: theme.border },
+                      localFilters.sortBy === option.value && { backgroundColor: theme.primary, borderColor: theme.primary }
                     ]}
                     onPress={() => setLocalFilters(prev => ({ ...prev, sortBy: option.value }))}
                   >
                     <Text style={[
                       styles.sortOptionText,
+                      { color: theme.textPrimary },
                       localFilters.sortBy === option.value && styles.sortOptionTextActive
                     ]}>
                       {option.label}
@@ -132,19 +136,21 @@ const FilterSheet = forwardRef<FilterSheetRef, FilterSheetProps>(
 
             {/* Carat Range */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Karat Aralığı</Text>
+              <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Karat Aralığı</Text>
               <View style={styles.rangeInputs}>
                 <TextInput
-                  style={styles.rangeInput}
+                  style={[styles.rangeInput, { backgroundColor: theme.backgroundCard, borderColor: theme.border, color: theme.textPrimary }]}
                   placeholder="Min"
+                  placeholderTextColor={theme.textDim}
                   keyboardType="decimal-pad"
                   value={localFilters.caratMin}
                   onChangeText={(text) => setLocalFilters(prev => ({ ...prev, caratMin: text }))}
                 />
-                <Text style={styles.rangeSeparator}>-</Text>
+                <Text style={[styles.rangeSeparator, { color: theme.textSecondary }]}>-</Text>
                 <TextInput
-                  style={styles.rangeInput}
+                  style={[styles.rangeInput, { backgroundColor: theme.backgroundCard, borderColor: theme.border, color: theme.textPrimary }]}
                   placeholder="Max"
+                  placeholderTextColor={theme.textDim}
                   keyboardType="decimal-pad"
                   value={localFilters.caratMax}
                   onChangeText={(text) => setLocalFilters(prev => ({ ...prev, caratMax: text }))}
@@ -154,19 +160,21 @@ const FilterSheet = forwardRef<FilterSheetRef, FilterSheetProps>(
 
             {/* Shape */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Şekil</Text>
+              <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Şekil</Text>
               <View style={styles.chipContainer}>
                 {SHAPES.map(shape => (
                   <TouchableOpacity
                     key={shape}
                     style={[
                       styles.chip,
-                      localFilters.shape.includes(shape) && styles.chipActive
+                      { backgroundColor: theme.backgroundCard, borderColor: theme.border },
+                      localFilters.shape.includes(shape) && { backgroundColor: theme.primary, borderColor: theme.primary }
                     ]}
                     onPress={() => toggleFilter('shape', shape)}
                   >
                     <Text style={[
                       styles.chipText,
+                      { color: theme.textPrimary },
                       localFilters.shape.includes(shape) && styles.chipTextActive
                     ]}>
                       {shape}
@@ -178,19 +186,21 @@ const FilterSheet = forwardRef<FilterSheetRef, FilterSheetProps>(
 
             {/* Color */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Renk</Text>
+              <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Renk</Text>
               <View style={styles.chipContainer}>
                 {COLORS.map(color => (
                   <TouchableOpacity
                     key={color}
                     style={[
                       styles.chip,
-                      localFilters.color.includes(color) && styles.chipActive
+                      { backgroundColor: theme.backgroundCard, borderColor: theme.border },
+                      localFilters.color.includes(color) && { backgroundColor: theme.primary, borderColor: theme.primary }
                     ]}
                     onPress={() => toggleFilter('color', color)}
                   >
                     <Text style={[
                       styles.chipText,
+                      { color: theme.textPrimary },
                       localFilters.color.includes(color) && styles.chipTextActive
                     ]}>
                       {color}
@@ -202,19 +212,21 @@ const FilterSheet = forwardRef<FilterSheetRef, FilterSheetProps>(
 
             {/* Clarity */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Berraklık</Text>
+              <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Berraklık</Text>
               <View style={styles.chipContainer}>
                 {CLARITIES.map(clarity => (
                   <TouchableOpacity
                     key={clarity}
                     style={[
                       styles.chip,
-                      localFilters.clarity.includes(clarity) && styles.chipActive
+                      { backgroundColor: theme.backgroundCard, borderColor: theme.border },
+                      localFilters.clarity.includes(clarity) && { backgroundColor: theme.primary, borderColor: theme.primary }
                     ]}
                     onPress={() => toggleFilter('clarity', clarity)}
                   >
                     <Text style={[
                       styles.chipText,
+                      { color: theme.textPrimary },
                       localFilters.clarity.includes(clarity) && styles.chipTextActive
                     ]}>
                       {clarity}
@@ -225,8 +237,8 @@ const FilterSheet = forwardRef<FilterSheetRef, FilterSheetProps>(
             </View>
           </ScrollView>
 
-          <View style={styles.footer}>
-            <TouchableOpacity style={styles.applyButton} onPress={handleApply}>
+          <View style={[styles.footer, { backgroundColor: theme.background, borderTopColor: theme.border }]}>
+            <TouchableOpacity style={[styles.applyButton, { backgroundColor: theme.primary }]} onPress={handleApply}>
               <Text style={styles.applyButtonText}>Filtrele</Text>
             </TouchableOpacity>
           </View>

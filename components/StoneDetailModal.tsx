@@ -9,6 +9,7 @@ import {
   Alert,
 } from 'react-native';
 import { useCartStore } from '../stores/cartStore';
+import { useTheme } from '../context/ThemeContext';
 
 interface Stone {
   id: string;
@@ -41,6 +42,7 @@ interface StoneDetailModalProps {
 
 export default function StoneDetailModal({ visible, stone, onClose }: StoneDetailModalProps) {
   const { addToCart } = useCartStore();
+  const { theme } = useTheme();
 
   if (!stone) return null;
 
@@ -80,17 +82,17 @@ export default function StoneDetailModal({ visible, stone, onClose }: StoneDetai
       animationType="slide"
       onRequestClose={onClose}
     >
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>💎 Taş Detayı</Text>
-          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-            <Text style={styles.closeButtonText}>✕</Text>
+      <View style={[styles.container, { backgroundColor: theme.background }]}>
+        <View style={[styles.header, { backgroundColor: theme.backgroundCard, borderBottomColor: theme.border }]}>
+          <Text style={[styles.headerTitle, { color: theme.textPrimary }]}>💎 Taş Detayı</Text>
+          <TouchableOpacity onPress={onClose} style={[styles.closeButton, { backgroundColor: theme.background }]}>
+            <Text style={[styles.closeButtonText, { color: theme.textSecondary }]}>✕</Text>
           </TouchableOpacity>
         </View>
 
         <ScrollView style={styles.content}>
-          <View style={styles.titleSection}>
-            <Text style={styles.stoneId}>{stone.stoneId}</Text>
+          <View style={[styles.titleSection, { backgroundColor: theme.backgroundCard }]}>
+            <Text style={[styles.stoneId, { color: theme.textPrimary }]}>{stone.stoneId}</Text>
             <View style={[
               styles.statusBadge,
               stone.status === 'available' ? styles.statusAvailable : styles.statusReserved
@@ -105,129 +107,130 @@ export default function StoneDetailModal({ visible, stone, onClose }: StoneDetai
           </View>
 
           <View style={styles.priceSection}>
-            <View style={styles.priceCard}>
-              <Text style={styles.priceLabel}>Toplam Fiyat</Text>
-              <Text style={styles.price}>${stone.totalPrice.toLocaleString()}</Text>
+            <View style={[styles.priceCard, { backgroundColor: theme.backgroundCard }]}>
+              <Text style={[styles.priceLabel, { color: theme.textSecondary }]}>Toplam Fiyat</Text>
+              <Text style={[styles.price, { color: theme.primary }]}>${stone.totalPrice.toLocaleString()}</Text>
             </View>
-            <View style={styles.priceCard}>
-              <Text style={styles.priceLabel}>Karat Fiyatı</Text>
-              <Text style={styles.pricePerCarat}>${stone.pricePerCarat.toLocaleString()}/CT</Text>
+            <View style={[styles.priceCard, { backgroundColor: theme.backgroundCard }]}>
+              <Text style={[styles.priceLabel, { color: theme.textSecondary }]}>Karat Fiyatı</Text>
+              <Text style={[styles.pricePerCarat, { color: theme.textSecondary }]}>${stone.pricePerCarat.toLocaleString()}/CT</Text>
             </View>
           </View>
 
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Temel Özellikler</Text>
+          <View style={[styles.section, { backgroundColor: theme.backgroundCard }]}>
+            <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Temel Özellikler</Text>
 
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Şekil:</Text>
-              <Text style={styles.detailValue}>{stone.shape}</Text>
+            <View style={[styles.detailRow, { borderBottomColor: theme.borderLight }]}>
+              <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>Şekil:</Text>
+              <Text style={[styles.detailValue, { color: theme.textPrimary }]}>{stone.shape}</Text>
             </View>
 
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Karat:</Text>
-              <Text style={styles.detailValue}>{stone.carat.toFixed(2)} CT</Text>
+            <View style={[styles.detailRow, { borderBottomColor: theme.borderLight }]}>
+              <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>Karat:</Text>
+              <Text style={[styles.detailValue, { color: theme.textPrimary }]}>{stone.carat.toFixed(2)} CT</Text>
             </View>
 
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Renk:</Text>
-              <Text style={styles.detailValue}>{stone.color}</Text>
+            <View style={[styles.detailRow, { borderBottomColor: theme.borderLight }]}>
+              <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>Renk:</Text>
+              <Text style={[styles.detailValue, { color: theme.textPrimary }]}>{stone.color}</Text>
             </View>
 
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Berraklık:</Text>
-              <Text style={styles.detailValue}>{stone.clarity}</Text>
+            <View style={[styles.detailRow, { borderBottomColor: theme.borderLight }]}>
+              <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>Berraklık:</Text>
+              <Text style={[styles.detailValue, { color: theme.textPrimary }]}>{stone.clarity}</Text>
             </View>
 
             {stone.cut && (
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Kesim:</Text>
-                <Text style={styles.detailValue}>{stone.cut}</Text>
+              <View style={[styles.detailRow, { borderBottomColor: theme.borderLight }]}>
+                <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>Kesim:</Text>
+                <Text style={[styles.detailValue, { color: theme.textPrimary }]}>{stone.cut}</Text>
               </View>
             )}
 
             {stone.polish && (
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Cila:</Text>
-                <Text style={styles.detailValue}>{stone.polish}</Text>
+              <View style={[styles.detailRow, { borderBottomColor: theme.borderLight }]}>
+                <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>Cila:</Text>
+                <Text style={[styles.detailValue, { color: theme.textPrimary }]}>{stone.polish}</Text>
               </View>
             )}
 
             {stone.symmetry && (
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Simetri:</Text>
-                <Text style={styles.detailValue}>{stone.symmetry}</Text>
+              <View style={[styles.detailRow, { borderBottomColor: theme.borderLight }]}>
+                <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>Simetri:</Text>
+                <Text style={[styles.detailValue, { color: theme.textPrimary }]}>{stone.symmetry}</Text>
               </View>
             )}
 
             {stone.fluorescence && (
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Floresans:</Text>
-                <Text style={styles.detailValue}>{stone.fluorescence}</Text>
+              <View style={[styles.detailRow, { borderBottomColor: theme.borderLight }]}>
+                <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>Floresans:</Text>
+                <Text style={[styles.detailValue, { color: theme.textPrimary }]}>{stone.fluorescence}</Text>
               </View>
             )}
           </View>
 
           {(stone.depth || stone.table || stone.measurements) && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Ölçüler</Text>
+            <View style={[styles.section, { backgroundColor: theme.backgroundCard }]}>
+              <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Ölçüler</Text>
 
               {stone.measurements && (
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Boyutlar:</Text>
-                  <Text style={styles.detailValue}>{stone.measurements} mm</Text>
+                <View style={[styles.detailRow, { borderBottomColor: theme.borderLight }]}>
+                  <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>Boyutlar:</Text>
+                  <Text style={[styles.detailValue, { color: theme.textPrimary }]}>{stone.measurements} mm</Text>
                 </View>
               )}
 
               {stone.depth && (
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Derinlik:</Text>
-                  <Text style={styles.detailValue}>{stone.depth}%</Text>
+                <View style={[styles.detailRow, { borderBottomColor: theme.borderLight }]}>
+                  <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>Derinlik:</Text>
+                  <Text style={[styles.detailValue, { color: theme.textPrimary }]}>{stone.depth}%</Text>
                 </View>
               )}
 
               {stone.table && (
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Tablo:</Text>
-                  <Text style={styles.detailValue}>{stone.table}%</Text>
+                <View style={[styles.detailRow, { borderBottomColor: theme.borderLight }]}>
+                  <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>Tablo:</Text>
+                  <Text style={[styles.detailValue, { color: theme.textPrimary }]}>{stone.table}%</Text>
                 </View>
               )}
             </View>
           )}
 
           {(stone.certificate || stone.certificateNumber) && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Sertifika</Text>
+            <View style={[styles.section, { backgroundColor: theme.backgroundCard }]}>
+              <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Sertifika</Text>
 
               {stone.certificate && (
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Sertifika Tipi:</Text>
-                  <Text style={styles.detailValue}>{stone.certificate}</Text>
+                <View style={[styles.detailRow, { borderBottomColor: theme.borderLight }]}>
+                  <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>Sertifika Tipi:</Text>
+                  <Text style={[styles.detailValue, { color: theme.textPrimary }]}>{stone.certificate}</Text>
                 </View>
               )}
 
               {stone.certificateNumber && (
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Sertifika No:</Text>
-                  <Text style={styles.detailValue}>{stone.certificateNumber}</Text>
+                <View style={[styles.detailRow, { borderBottomColor: theme.borderLight }]}>
+                  <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>Sertifika No:</Text>
+                  <Text style={[styles.detailValue, { color: theme.textPrimary }]}>{stone.certificateNumber}</Text>
                 </View>
               )}
             </View>
           )}
 
           {stone.supplierName && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Tedarikçi</Text>
-              <View style={styles.supplierCard}>
-                <Text style={styles.supplierName}>🏢 {stone.supplierName}</Text>
+            <View style={[styles.section, { backgroundColor: theme.backgroundCard }]}>
+              <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Tedarikçi</Text>
+              <View style={[styles.supplierCard, { backgroundColor: theme.background }]}>
+                <Text style={[styles.supplierName, { color: theme.textPrimary }]}>🏢 {stone.supplierName}</Text>
               </View>
             </View>
           )}
         </ScrollView>
 
-        <View style={styles.footer}>
+        <View style={[styles.footer, { backgroundColor: theme.backgroundCard, borderTopColor: theme.border }]}>
           <TouchableOpacity
             style={[
               styles.addToCartButton,
+              { backgroundColor: theme.primary },
               stone.status !== 'available' && styles.addToCartButtonDisabled
             ]}
             onPress={handleAddToCart}

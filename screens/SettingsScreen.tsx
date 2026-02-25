@@ -9,9 +9,11 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useSettingsStore, Language, Currency } from '../stores/settingsStore';
+import { useTheme } from '../context/ThemeContext';
 
 export default function SettingsScreen() {
   const navigation = useNavigation();
+  const { theme } = useTheme();
   const { language, currency, setLanguage, setCurrency, loadSettings } = useSettingsStore();
 
   useEffect(() => {
@@ -40,18 +42,19 @@ export default function SettingsScreen() {
   };
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={[styles.container, { backgroundColor: theme.background }]}>
       {/* Language Section */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>🌍 Dil / Language</Text>
-        <Text style={styles.sectionSubtitle}>Uygulama dilini seçin</Text>
+      <View style={[styles.section, { backgroundColor: theme.backgroundCard }]}>
+        <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>🌍 Dil / Language</Text>
+        <Text style={[styles.sectionSubtitle, { color: theme.textSecondary }]}>Uygulama dilini seçin</Text>
 
         {languages.map((lang) => (
           <TouchableOpacity
             key={lang.value}
             style={[
               styles.optionButton,
-              language === lang.value && styles.optionButtonActive,
+              { backgroundColor: theme.background },
+              language === lang.value && { backgroundColor: theme.primary + '20', borderColor: theme.primary },
             ]}
             onPress={() => handleLanguageChange(lang.value)}
           >
@@ -59,22 +62,23 @@ export default function SettingsScreen() {
               <Text style={styles.optionFlag}>{lang.flag}</Text>
               <Text style={[
                 styles.optionLabel,
-                language === lang.value && styles.optionLabelActive,
+                { color: theme.textPrimary },
+                language === lang.value && { color: theme.primary },
               ]}>
                 {lang.label}
               </Text>
             </View>
             {language === lang.value && (
-              <Text style={styles.checkmark}>✓</Text>
+              <Text style={[styles.checkmark, { color: theme.primary }]}>✓</Text>
             )}
           </TouchableOpacity>
         ))}
       </View>
 
       {/* Currency Section */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>💱 Para Birimi / Currency</Text>
-        <Text style={styles.sectionSubtitle}>
+      <View style={[styles.section, { backgroundColor: theme.backgroundCard }]}>
+        <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>💱 Para Birimi / Currency</Text>
+        <Text style={[styles.sectionSubtitle, { color: theme.textSecondary }]}>
           Fiyatların gösterileceği para birimini seçin
         </Text>
 
@@ -83,30 +87,32 @@ export default function SettingsScreen() {
             key={curr.value}
             style={[
               styles.optionButton,
-              currency === curr.value && styles.optionButtonActive,
+              { backgroundColor: theme.background },
+              currency === curr.value && { backgroundColor: theme.primary + '20', borderColor: theme.primary },
             ]}
             onPress={() => handleCurrencyChange(curr.value)}
           >
             <View style={styles.optionLeft}>
-              <Text style={styles.optionSymbol}>{curr.symbol}</Text>
+              <Text style={[styles.optionSymbol, { color: theme.primary }]}>{curr.symbol}</Text>
               <View>
                 <Text style={[
                   styles.optionLabel,
-                  currency === curr.value && styles.optionLabelActive,
+                  { color: theme.textPrimary },
+                  currency === curr.value && { color: theme.primary },
                 ]}>
                   {curr.label}
                 </Text>
-                <Text style={styles.optionCode}>{curr.value}</Text>
+                <Text style={[styles.optionCode, { color: theme.textDim }]}>{curr.value}</Text>
               </View>
             </View>
             {currency === curr.value && (
-              <Text style={styles.checkmark}>✓</Text>
+              <Text style={[styles.checkmark, { color: theme.primary }]}>✓</Text>
             )}
           </TouchableOpacity>
         ))}
 
-        <View style={styles.infoBox}>
-          <Text style={styles.infoText}>
+        <View style={[styles.infoBox, { backgroundColor: theme.warning + '20', borderLeftColor: theme.warning }]}>
+          <Text style={[styles.infoText, { color: theme.textSecondary }]}>
             ℹ️ Kur bilgileri yaklaşık değerlerdir. Gerçek fiyatlar için tedarikçi ile iletişime geçin.
           </Text>
         </View>

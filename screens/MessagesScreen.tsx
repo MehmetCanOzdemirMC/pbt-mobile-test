@@ -6,11 +6,15 @@ import {
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { useMessagingStore, Conversation } from '../stores/messagingStore';
-import { auth } from '../config/firebase';
+import { auth, db } from '../config/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 import { Alert } from 'react-native';
+import ScreenWrapper from '../components/ScreenWrapper';
+import { useTheme } from '../context/ThemeContext';
 
 type RootStackParamList = {
   MainTabs: undefined;
@@ -18,14 +22,15 @@ type RootStackParamList = {
 };
 
 export default function MessagesScreen() {
+  const { theme } = useTheme();
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
-  const { conversations, loading, loadConversations, startConversation } = useMessagingStore();
+  const { conversations, loading, startConversation } = useMessagingStore();
   const [refreshing, setRefreshing] = useState(false);
   const [navigating, setNavigating] = useState(false);
+  const [profilePhotos, setProfilePhotos] = useState<{ [userId: string]: string | null }>({});
 
-  useEffect(() => {
-    loadConversations();
-  }, []);
+  // Note: loadConversations is already called in App.tsx (MainTabs)
+  // No need to call it here again to avoid duplicate listeners
 
   // Debug: Log conversations to see what we're getting
   useEffect(() => {
@@ -34,10 +39,56 @@ export default function MessagesScreen() {
     console.log('Length:', conversations?.length);
   }, [conversations]);
 
-  const onRefresh = async () => {
+  // Fetch profile photos for conversation participants
+  useEffect(() => {
+    const fetchProfilePhotos = async () => {
+      const currentUserId = auth.currentUser?.uid;
+      if (!currentUserId || !Array.isArray(conversations)) return;
+
+      const photosToFetch: { [userId: string]: string | null } = {};
+
+      // Collect all participant IDs that need photos
+      for (const conv of conversations) {
+        if (!conv.participants || !Array.isArray(conv.participants)) continue;
+
+        for (const participantId of conv.participants) {
+          if (participantId === currentUserId) continue; // Skip current user
+          if (profilePhotos[participantId] !== undefined) continue; // Already fetched
+
+          // Check if conversation already has the photo
+          const hasPhoto = conv.participantPhotos?.[participantId];
+          if (hasPhoto) {
+            photosToFetch[participantId] = hasPhoto;
+          } else {
+            // Fetch from users collection
+            try {
+              const userDoc = await getDoc(doc(db, 'users', participantId));
+              if (userDoc.exists()) {
+                const userData = userDoc.data();
+                photosToFetch[participantId] = userData.photoURL || null;
+              }
+            } catch (error) {
+              console.error('Error fetching profile photo for', participantId, error);
+              photosToFetch[participantId] = null;
+            }
+          }
+        }
+      }
+
+      // Update state with fetched photos
+      if (Object.keys(photosToFetch).length > 0) {
+        setProfilePhotos(prev => ({ ...prev, ...photosToFetch }));
+      }
+    };
+
+    fetchProfilePhotos();
+  }, [conversations]);
+
+  const onRefresh = () => {
     setRefreshing(true);
-    await loadConversations();
-    setRefreshing(false);
+    // Real-time listener is already active in App.tsx
+    // Just show refresh animation briefly
+    setTimeout(() => setRefreshing(false), 500);
   };
 
   const getOtherUserName = (conversation: Conversation) => {
@@ -95,10 +146,22 @@ export default function MessagesScreen() {
     const userName = getOtherUserName(item);
     const timeStr = formatTime(item.lastMessageTime);
     const lastMsg = typeof item.lastMessage === 'string' ? item.lastMessage : 'Henüz mesaj yok';
+    const hasUnread = (item.unreadCount || 0) > 0;
+
+    // Get other user's photo (try conversation first, then fetched cache)
+    const currentUserId = auth.currentUser?.uid;
+    const otherUserId = item.participants.find((id: string) => id !== currentUserId);
+    const otherUserPhoto = otherUserId
+      ? (item.participantPhotos?.[otherUserId] || profilePhotos[otherUserId] || null)
+      : null;
 
     return (
       <TouchableOpacity
-        style={styles.conversationCard}
+        style={[
+          styles.conversationCard,
+          { backgroundColor: theme.backgroundCard, borderBottomColor: theme.border },
+          hasUnread && { backgroundColor: theme.primary + '15' }
+        ]}
         onPress={async () => {
           if (navigating) return; // Prevent double-tap
           setNavigating(true);
@@ -141,6 +204,9 @@ export default function MessagesScreen() {
 
             // Navigate to the canonical conversation
             navigation.navigate('Conversation', { conversationId: canonicalConvId });
+
+            // Note: markConversationAsRead will be called in ConversationScreen
+            // No need to call it here
           } catch (error) {
             console.error('❌ [MessagesScreen] Error finding conversation:', error);
             Alert.alert('Hata', 'Konuşma açılırken hata oluştu');
@@ -150,25 +216,40 @@ export default function MessagesScreen() {
         }}
         disabled={navigating}
       >
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>
-            {userName.charAt(0).toUpperCase()}
-          </Text>
-        </View>
+        {otherUserPhoto ? (
+          <Image
+            source={{ uri: otherUserPhoto }}
+            style={styles.avatar}
+          />
+        ) : (
+          <View style={[styles.avatar, { backgroundColor: theme.primary }]}>
+            <Text style={styles.avatarText}>
+              {userName.charAt(0).toUpperCase()}
+            </Text>
+          </View>
+        )}
 
         <View style={styles.conversationContent}>
           <View style={styles.conversationHeader}>
-            <Text style={styles.conversationName}>{userName}</Text>
-            <Text style={styles.conversationTime}>{timeStr}</Text>
+            <Text style={[
+              styles.conversationName,
+              { color: theme.textPrimary },
+              hasUnread && { fontWeight: 'bold' }
+            ]}>{userName}</Text>
+            <Text style={[styles.conversationTime, { color: theme.textDim }]}>{timeStr}</Text>
           </View>
 
-          <Text style={styles.lastMessage} numberOfLines={1}>
+          <Text style={[
+            styles.lastMessage,
+            { color: theme.textSecondary },
+            hasUnread && { fontWeight: '600', color: theme.textPrimary }
+          ]} numberOfLines={1}>
             {lastMsg}
           </Text>
         </View>
 
         {item.unreadCount > 0 && (
-          <View style={styles.unreadBadge}>
+          <View style={[styles.unreadBadge, { backgroundColor: theme.error }]}>
             <Text style={styles.unreadText}>{item.unreadCount}</Text>
           </View>
         )}
@@ -176,41 +257,54 @@ export default function MessagesScreen() {
     );
   };
 
-  // Safety check: Ensure conversations is an array
-  const conversationsArray = Array.isArray(conversations) ? conversations : [];
+  // Safety check: Ensure conversations is an array and sort by last message time
+  const conversationsArray = Array.isArray(conversations)
+    ? [...conversations].sort((a, b) => {
+        // Sort by lastMessageTime, newest first
+        const timeA = a.lastMessageTime || 0;
+        const timeB = b.lastMessageTime || 0;
+        return timeB - timeA;
+      })
+    : [];
 
   if (loading && conversationsArray.length === 0) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
-        <Text style={styles.loadingText}>Mesajlar yükleniyor...</Text>
-      </View>
+      <ScreenWrapper>
+        <View style={[styles.loadingContainer, { backgroundColor: theme.background }]}>
+          <ActivityIndicator size="large" color={theme.primary} />
+          <Text style={[styles.loadingText, { color: theme.textSecondary }]}>Mesajlar yükleniyor...</Text>
+        </View>
+      </ScreenWrapper>
     );
   }
 
   if (conversationsArray.length === 0) {
     return (
-      <View style={styles.emptyContainer}>
-        <Text style={styles.emptyIcon}>💬</Text>
-        <Text style={styles.emptyTitle}>Henüz Mesajınız Yok</Text>
-        <Text style={styles.emptyText}>
-          Tedarikçilerle veya müşterilerle sohbet başlatın
-        </Text>
-      </View>
+      <ScreenWrapper>
+        <View style={[styles.emptyContainer, { backgroundColor: theme.background }]}>
+          <Text style={styles.emptyIcon}>💬</Text>
+          <Text style={[styles.emptyTitle, { color: theme.textPrimary }]}>Henüz Mesajınız Yok</Text>
+          <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
+            Tedarikçilerle veya müşterilerle sohbet başlatın
+          </Text>
+        </View>
+      </ScreenWrapper>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <FlatList
-        data={conversationsArray}
-        renderItem={renderConversation}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
-        onRefresh={onRefresh}
-        refreshing={refreshing}
-      />
-    </View>
+    <ScreenWrapper>
+      <View style={[styles.container, { backgroundColor: theme.background }]}>
+        <FlatList
+          data={conversationsArray}
+          renderItem={renderConversation}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContent}
+          onRefresh={onRefresh}
+          refreshing={refreshing}
+        />
+      </View>
+    </ScreenWrapper>
   );
 }
 
@@ -263,6 +357,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
   },
+  conversationCardUnread: {
+    backgroundColor: '#f0f7ff',
+  },
   avatar: {
     width: 50,
     height: 50,
@@ -290,6 +387,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#333',
   },
+  conversationNameUnread: {
+    fontWeight: 'bold',
+    color: '#000',
+  },
   conversationTime: {
     fontSize: 12,
     color: '#999',
@@ -298,8 +399,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
   },
+  lastMessageUnread: {
+    fontWeight: '600',
+    color: '#333',
+  },
   unreadBadge: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#FF3B30',
     borderRadius: 12,
     minWidth: 24,
     height: 24,

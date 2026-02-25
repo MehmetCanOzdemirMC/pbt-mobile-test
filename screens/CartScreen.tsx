@@ -10,8 +10,11 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useCartStore, CartItem } from '../stores/cartStore';
+import ScreenWrapper from '../components/ScreenWrapper';
+import { useTheme } from '../context/ThemeContext';
 
 export default function CartScreen() {
+  const { theme } = useTheme();
   const navigation = useNavigation();
   const { items, loading, loadCart, removeFromCart, clearCart, totalPrice, checkExpiry } = useCartStore();
 
@@ -79,50 +82,50 @@ export default function CartScreen() {
   };
 
   const renderCartItem = ({ item }: { item: CartItem }) => (
-    <View style={styles.cartItem}>
-      <View style={styles.itemHeader}>
-        <Text style={styles.stoneId}>💎 {item.stoneId}</Text>
+    <View style={[styles.cartItem, { backgroundColor: theme.backgroundCard }]}>
+      <View style={[styles.itemHeader, { borderBottomColor: theme.borderLight }]}>
+        <Text style={[styles.stoneId, { color: theme.textPrimary }]}>💎 {item.stoneId}</Text>
         <TouchableOpacity onPress={() => handleRemoveItem(item.id)}>
           <Text style={styles.removeButton}>🗑️</Text>
         </TouchableOpacity>
       </View>
 
       <View style={styles.itemBody}>
-        <View style={styles.row}>
-          <Text style={styles.label}>Şekil:</Text>
-          <Text style={styles.value}>{item.shape}</Text>
+        <View style={[styles.row, { borderBottomColor: theme.borderLight }]}>
+          <Text style={[styles.label, { color: theme.textSecondary }]}>Şekil:</Text>
+          <Text style={[styles.value, { color: theme.textPrimary }]}>{item.shape}</Text>
         </View>
 
-        <View style={styles.row}>
-          <Text style={styles.label}>Karat:</Text>
-          <Text style={styles.value}>{item.carat.toFixed(2)} CT</Text>
+        <View style={[styles.row, { borderBottomColor: theme.borderLight }]}>
+          <Text style={[styles.label, { color: theme.textSecondary }]}>Karat:</Text>
+          <Text style={[styles.value, { color: theme.textPrimary }]}>{item.carat.toFixed(2)} CT</Text>
         </View>
 
-        <View style={styles.row}>
-          <Text style={styles.label}>Renk:</Text>
-          <Text style={styles.value}>{item.color}</Text>
+        <View style={[styles.row, { borderBottomColor: theme.borderLight }]}>
+          <Text style={[styles.label, { color: theme.textSecondary }]}>Renk:</Text>
+          <Text style={[styles.value, { color: theme.textPrimary }]}>{item.color}</Text>
         </View>
 
-        <View style={styles.row}>
-          <Text style={styles.label}>Berraklık:</Text>
-          <Text style={styles.value}>{item.clarity}</Text>
+        <View style={[styles.row, { borderBottomColor: theme.borderLight }]}>
+          <Text style={[styles.label, { color: theme.textSecondary }]}>Berraklık:</Text>
+          <Text style={[styles.value, { color: theme.textPrimary }]}>{item.clarity}</Text>
         </View>
 
         {item.supplierName && (
-          <View style={styles.row}>
-            <Text style={styles.label}>Tedarikçi:</Text>
-            <Text style={styles.value}>{item.supplierName}</Text>
+          <View style={[styles.row, { borderBottomColor: theme.borderLight }]}>
+            <Text style={[styles.label, { color: theme.textSecondary }]}>Tedarikçi:</Text>
+            <Text style={[styles.value, { color: theme.textPrimary }]}>{item.supplierName}</Text>
           </View>
         )}
       </View>
 
-      <View style={styles.itemFooter}>
+      <View style={[styles.itemFooter, { backgroundColor: theme.background }]}>
         <View>
-          <Text style={styles.priceLabel}>Fiyat</Text>
-          <Text style={styles.price}>${item.totalPrice.toLocaleString()}</Text>
+          <Text style={[styles.priceLabel, { color: theme.textSecondary }]}>Fiyat</Text>
+          <Text style={[styles.price, { color: theme.primary }]}>${item.totalPrice.toLocaleString()}</Text>
         </View>
-        <View style={styles.expiryContainer}>
-          <Text style={styles.expiryText}>⏱️ {formatTimeRemaining(item.addedAt)}</Text>
+        <View style={[styles.expiryContainer, { backgroundColor: theme.warningLight + '20' }]}>
+          <Text style={[styles.expiryText, { color: theme.warning }]}>⏱️ {formatTimeRemaining(item.addedAt)}</Text>
         </View>
       </View>
     </View>
@@ -130,57 +133,63 @@ export default function CartScreen() {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
-        <Text style={styles.loadingText}>Sepet yükleniyor...</Text>
-      </View>
+      <ScreenWrapper>
+        <View style={[styles.loadingContainer, { backgroundColor: theme.background }]}>
+          <ActivityIndicator size="large" color={theme.primary} />
+          <Text style={[styles.loadingText, { color: theme.textSecondary }]}>Sepet yükleniyor...</Text>
+        </View>
+      </ScreenWrapper>
     );
   }
 
   if (items.length === 0) {
     return (
-      <View style={styles.emptyContainer}>
-        <Text style={styles.emptyIcon}>🛒</Text>
-        <Text style={styles.emptyTitle}>Sepetiniz Boş</Text>
-        <Text style={styles.emptyText}>Marketplace'den taş ekleyerek başlayın</Text>
-      </View>
+      <ScreenWrapper>
+        <View style={[styles.emptyContainer, { backgroundColor: theme.background }]}>
+          <Text style={styles.emptyIcon}>🛒</Text>
+          <Text style={[styles.emptyTitle, { color: theme.textPrimary }]}>Sepetiniz Boş</Text>
+          <Text style={[styles.emptyText, { color: theme.textSecondary }]}>Marketplace'den taş ekleyerek başlayın</Text>
+        </View>
+      </ScreenWrapper>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>🛒 Sepetim ({items.length} Taş)</Text>
-        <TouchableOpacity onPress={handleClearCart}>
-          <Text style={styles.clearButton}>Temizle</Text>
-        </TouchableOpacity>
-      </View>
-
-      <FlatList
-        data={items}
-        renderItem={renderCartItem}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
-      />
-
-      <View style={styles.summaryContainer}>
-        <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>Toplam:</Text>
-          <Text style={styles.summaryValue}>${totalPrice().toLocaleString()}</Text>
+    <ScreenWrapper>
+      <View style={[styles.container, { backgroundColor: theme.background }]}>
+        <View style={[styles.header, { backgroundColor: theme.backgroundCard, borderBottomColor: theme.border }]}>
+          <Text style={[styles.headerTitle, { color: theme.textPrimary }]}>🛒 Sepetim ({items.length} Taş)</Text>
+          <TouchableOpacity onPress={handleClearCart}>
+            <Text style={[styles.clearButton, { color: theme.error }]}>Temizle</Text>
+          </TouchableOpacity>
         </View>
 
-        <TouchableOpacity
-          style={styles.checkoutButton}
-          onPress={() => navigation.navigate('Checkout' as never)}
-        >
-          <Text style={styles.checkoutButtonText}>Sipariş Ver 🚀</Text>
-        </TouchableOpacity>
+        <FlatList
+          data={items}
+          renderItem={renderCartItem}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContent}
+        />
 
-        <Text style={styles.note}>
-          ℹ️ Sepetteki ürünler 1 saat sonra otomatik olarak silinir
-        </Text>
+        <View style={[styles.summaryContainer, { backgroundColor: theme.backgroundCard, borderTopColor: theme.border }]}>
+          <View style={styles.summaryRow}>
+            <Text style={[styles.summaryLabel, { color: theme.textPrimary }]}>Toplam:</Text>
+            <Text style={[styles.summaryValue, { color: theme.primary }]}>${totalPrice().toLocaleString()}</Text>
+          </View>
+
+          <TouchableOpacity
+            style={[styles.checkoutButton, { backgroundColor: theme.success }]}
+            onPress={() => navigation.navigate('Checkout' as never)}
+          >
+            <Text style={styles.checkoutButtonText}>Sipariş Ver 🚀</Text>
+          </TouchableOpacity>
+
+          <Text style={[styles.note, { color: theme.textDim }]}>
+            ℹ️ Sepetteki ürünler 1 saat sonra otomatik olarak silinir
+          </Text>
+        </View>
       </View>
-    </View>
+    </ScreenWrapper>
   );
 }
 

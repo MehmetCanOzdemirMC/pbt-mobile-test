@@ -10,9 +10,11 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useFavoritesStore } from '../stores/favoritesStore';
+import { useTheme } from '../context/ThemeContext';
 
 export default function FavoritesScreen() {
   const navigation = useNavigation();
+  const { theme } = useTheme();
   const { favorites, loading, loadFavorites, removeFromFavorites } = useFavoritesStore();
 
   useEffect(() => {
@@ -45,9 +47,9 @@ export default function FavoritesScreen() {
   };
 
   const renderFavoriteCard = ({ item }: { item: any }) => (
-    <TouchableOpacity style={styles.card} onPress={() => handleStonePress(item.id)}>
-      <View style={styles.cardHeader}>
-        <Text style={styles.stoneId}>💎 {item.stoneId}</Text>
+    <TouchableOpacity style={[styles.card, { backgroundColor: theme.backgroundCard }]} onPress={() => handleStonePress(item.id)}>
+      <View style={[styles.cardHeader, { borderBottomColor: theme.borderLight }]}>
+        <Text style={[styles.stoneId, { color: theme.textPrimary }]}>💎 {item.stoneId}</Text>
         <TouchableOpacity
           style={styles.removeButton}
           onPress={() => handleRemoveFavorite(item.id)}
@@ -57,35 +59,35 @@ export default function FavoritesScreen() {
       </View>
 
       <View style={styles.cardBody}>
-        <View style={styles.row}>
-          <Text style={styles.label}>Şekil:</Text>
-          <Text style={styles.value}>{item.shape}</Text>
+        <View style={[styles.row, { borderBottomColor: theme.borderLight }]}>
+          <Text style={[styles.label, { color: theme.textSecondary }]}>Şekil:</Text>
+          <Text style={[styles.value, { color: theme.textPrimary }]}>{item.shape}</Text>
         </View>
 
-        <View style={styles.row}>
-          <Text style={styles.label}>Karat:</Text>
-          <Text style={styles.value}>{item.carat.toFixed(2)} CT</Text>
+        <View style={[styles.row, { borderBottomColor: theme.borderLight }]}>
+          <Text style={[styles.label, { color: theme.textSecondary }]}>Karat:</Text>
+          <Text style={[styles.value, { color: theme.textPrimary }]}>{item.carat.toFixed(2)} CT</Text>
         </View>
 
-        <View style={styles.row}>
-          <Text style={styles.label}>Renk:</Text>
-          <Text style={styles.value}>{item.color}</Text>
+        <View style={[styles.row, { borderBottomColor: theme.borderLight }]}>
+          <Text style={[styles.label, { color: theme.textSecondary }]}>Renk:</Text>
+          <Text style={[styles.value, { color: theme.textPrimary }]}>{item.color}</Text>
         </View>
 
-        <View style={styles.row}>
-          <Text style={styles.label}>Berraklık:</Text>
-          <Text style={styles.value}>{item.clarity}</Text>
+        <View style={[styles.row, { borderBottomColor: theme.borderLight }]}>
+          <Text style={[styles.label, { color: theme.textSecondary }]}>Berraklık:</Text>
+          <Text style={[styles.value, { color: theme.textPrimary }]}>{item.clarity}</Text>
         </View>
       </View>
 
-      <View style={styles.cardFooter}>
+      <View style={[styles.cardFooter, { backgroundColor: theme.background }]}>
         <View>
-          <Text style={styles.priceLabel}>Toplam Fiyat</Text>
-          <Text style={styles.price}>${item.totalPrice.toLocaleString()}</Text>
+          <Text style={[styles.priceLabel, { color: theme.textSecondary }]}>Toplam Fiyat</Text>
+          <Text style={[styles.price, { color: theme.primary }]}>${item.totalPrice.toLocaleString()}</Text>
         </View>
         <View style={styles.pricePerCaratContainer}>
-          <Text style={styles.pricePerCaratLabel}>$/CT</Text>
-          <Text style={styles.pricePerCarat}>${item.pricePerCarat.toLocaleString()}</Text>
+          <Text style={[styles.pricePerCaratLabel, { color: theme.textDim }]}>$/CT</Text>
+          <Text style={[styles.pricePerCarat, { color: theme.textSecondary }]}>${item.pricePerCarat.toLocaleString()}</Text>
         </View>
       </View>
     </TouchableOpacity>
@@ -93,23 +95,23 @@ export default function FavoritesScreen() {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
-        <Text style={styles.loadingText}>Favoriler yükleniyor...</Text>
+      <View style={[styles.loadingContainer, { backgroundColor: theme.background }]}>
+        <ActivityIndicator size="large" color={theme.primary} />
+        <Text style={[styles.loadingText, { color: theme.textSecondary }]}>Favoriler yükleniyor...</Text>
       </View>
     );
   }
 
   if (favorites.length === 0) {
     return (
-      <View style={styles.emptyContainer}>
+      <View style={[styles.emptyContainer, { backgroundColor: theme.background }]}>
         <Text style={styles.emptyIcon}>❤️</Text>
-        <Text style={styles.emptyTitle}>Henüz favori taş yok</Text>
-        <Text style={styles.emptyText}>
+        <Text style={[styles.emptyTitle, { color: theme.textPrimary }]}>Henüz favori taş yok</Text>
+        <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
           Beğendiğiniz taşları favorilerinize ekleyin
         </Text>
         <TouchableOpacity
-          style={styles.browseButton}
+          style={[styles.browseButton, { backgroundColor: theme.primary }]}
           onPress={() => (navigation as any).navigate('Marketplace')}
         >
           <Text style={styles.browseButtonText}>Taşlara Gözat</Text>
@@ -119,10 +121,10 @@ export default function FavoritesScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>❤️ Favorilerim</Text>
-        <Text style={styles.headerSubtitle}>{favorites.length} taş</Text>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <View style={[styles.header, { backgroundColor: theme.backgroundCard, borderBottomColor: theme.border }]}>
+        <Text style={[styles.headerTitle, { color: theme.textPrimary }]}>❤️ Favorilerim</Text>
+        <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>{favorites.length} taş</Text>
       </View>
 
       <FlatList

@@ -11,6 +11,7 @@ import {
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { useNavigation } from '@react-navigation/native';
 import { auth, db } from '../../config/firebase';
+import { useTheme } from '../../context/ThemeContext';
 
 interface Order {
   id: string;
@@ -29,6 +30,7 @@ interface Order {
  * Shows orders where supplier is the seller
  */
 export default function SalesScreen() {
+  const { theme } = useTheme();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -114,29 +116,29 @@ export default function SalesScreen() {
 
     return (
       <TouchableOpacity
-        style={styles.card}
+        style={[styles.card, { backgroundColor: theme.backgroundCard }]}
         onPress={() => handleOrderPress(item.id)}
       >
         <View style={styles.cardHeader}>
-          <Text style={styles.orderId}>#{item.id.substring(0, 8)}</Text>
+          <Text style={[styles.orderId, { color: theme.textPrimary }]}>#{item.id.substring(0, 8)}</Text>
           <View style={[styles.statusBadge, { backgroundColor: statusColor }]}>
             <Text style={styles.statusText}>{statusText}</Text>
           </View>
         </View>
 
         {item.buyerCompany && (
-          <Text style={styles.company}>{item.buyerCompany}</Text>
+          <Text style={[styles.company, { color: theme.textSecondary }]}>{item.buyerCompany}</Text>
         )}
 
         <View style={styles.itemsContainer}>
-          <Text style={styles.itemsText}>
+          <Text style={[styles.itemsText, { color: theme.textDim }]}>
             {item.items?.length || 0} taş
           </Text>
         </View>
 
-        <View style={styles.footer}>
-          <Text style={styles.price}>${item.finalTotal?.toLocaleString() || '0'}</Text>
-          <Text style={styles.date}>
+        <View style={[styles.footer, { borderTopColor: theme.borderLight }]}>
+          <Text style={[styles.price, { color: theme.primary }]}>${item.finalTotal?.toLocaleString() || '0'}</Text>
+          <Text style={[styles.date, { color: theme.textDim }]}>
             {item.createdAt?.toDate?.()?.toLocaleDateString('tr-TR') || ''}
           </Text>
         </View>
@@ -146,14 +148,14 @@ export default function SalesScreen() {
 
   if (loading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#007AFF" />
+      <View style={[styles.centered, { backgroundColor: theme.background }]}>
+        <ActivityIndicator size="large" color={theme.primary} />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       <FlatList
         data={orders}
         keyExtractor={(item) => item.id}
@@ -164,8 +166,8 @@ export default function SalesScreen() {
         }
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Text style={styles.emptyText}>Henüz sipariş yok</Text>
-            <Text style={styles.emptySubtext}>Gelen siparişler burada görünecek</Text>
+            <Text style={[styles.emptyText, { color: theme.textDim }]}>Henüz sipariş yok</Text>
+            <Text style={[styles.emptySubtext, { color: theme.textDim }]}>Gelen siparişler burada görünecek</Text>
           </View>
         }
       />

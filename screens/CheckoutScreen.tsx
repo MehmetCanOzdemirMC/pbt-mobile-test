@@ -14,8 +14,11 @@ import { useCartStore } from '../stores/cartStore';
 import { useMessagingStore } from '../stores/messagingStore';
 import { auth, db } from '../config/firebase';
 import { collection, addDoc, doc, updateDoc, serverTimestamp, writeBatch, getDoc, setDoc } from 'firebase/firestore';
+import ScreenWrapper from '../components/ScreenWrapper';
+import { useTheme } from '../context/ThemeContext';
 
 export default function CheckoutScreen() {
+  const { theme } = useTheme();
   const navigation = useNavigation();
   const { items: cart, totalPrice: getTotalPrice, clearCart } = useCartStore();
   const { startConversation, sendMessageById } = useMessagingStore();
@@ -353,12 +356,12 @@ export default function CheckoutScreen() {
 
   if (cart.length === 0) {
     return (
-      <View style={styles.emptyContainer}>
+      <View style={[styles.emptyContainer, { backgroundColor: theme.background }]}>
         <Text style={styles.emptyIcon}>🛒</Text>
-        <Text style={styles.emptyTitle}>Sepetiniz Boş</Text>
-        <Text style={styles.emptyText}>Önce sepete ürün ekleyin</Text>
+        <Text style={[styles.emptyTitle, { color: theme.textPrimary }]}>Sepetiniz Boş</Text>
+        <Text style={[styles.emptyText, { color: theme.textSecondary }]}>Önce sepete ürün ekleyin</Text>
         <TouchableOpacity
-          style={styles.backButton}
+          style={[styles.backButton, { backgroundColor: theme.primary }]}
           onPress={() => navigation.goBack()}
         >
           <Text style={styles.backButtonText}>Geri Dön</Text>
@@ -368,39 +371,40 @@ export default function CheckoutScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <ScrollView style={styles.scrollView}>
+    <ScreenWrapper>
+      <View style={[styles.container, { backgroundColor: theme.background }]}>
+        <ScrollView style={styles.scrollView}>
         {/* Order Summary */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Sipariş Özeti</Text>
-          <View style={styles.summaryBox}>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Ürün Sayısı:</Text>
-              <Text style={styles.summaryValue}>{cart.length} adet</Text>
+        <View style={[styles.section, { borderBottomColor: theme.borderLight }]}>
+          <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Sipariş Özeti</Text>
+          <View style={[styles.summaryBox, { backgroundColor: theme.backgroundCard }]}>
+            <View style={[styles.summaryRow, { borderBottomColor: theme.border }]}>
+              <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>Ürün Sayısı:</Text>
+              <Text style={[styles.summaryValue, { color: theme.textPrimary }]}>{cart.length} adet</Text>
             </View>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Toplam Karat:</Text>
-              <Text style={styles.summaryValue}>
+            <View style={[styles.summaryRow, { borderBottomColor: theme.border }]}>
+              <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>Toplam Karat:</Text>
+              <Text style={[styles.summaryValue, { color: theme.textPrimary }]}>
                 {cart.reduce((sum, item) => sum + item.carat, 0).toFixed(2)} CT
               </Text>
             </View>
             <View style={[styles.summaryRow, styles.summaryRowTotal]}>
-              <Text style={styles.summaryLabelTotal}>Toplam Tutar:</Text>
-              <Text style={styles.summaryValueTotal}>${totalPrice.toLocaleString()}</Text>
+              <Text style={[styles.summaryLabelTotal, { color: theme.textPrimary }]}>Toplam Tutar:</Text>
+              <Text style={[styles.summaryValueTotal, { color: theme.primary }]}>${totalPrice.toLocaleString()}</Text>
             </View>
           </View>
         </View>
 
         {/* Items List */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Ürünler ({cart.length})</Text>
+        <View style={[styles.section, { borderBottomColor: theme.borderLight }]}>
+          <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Ürünler ({cart.length})</Text>
           {cart.map((item) => (
-            <View key={item.id} style={styles.itemCard}>
+            <View key={item.id} style={[styles.itemCard, { backgroundColor: theme.backgroundCard }]}>
               <View style={styles.itemHeader}>
-                <Text style={styles.itemStoneId}>💎 {item.stoneId}</Text>
-                <Text style={styles.itemPrice}>${item.totalPrice.toLocaleString()}</Text>
+                <Text style={[styles.itemStoneId, { color: theme.textPrimary }]}>💎 {item.stoneId}</Text>
+                <Text style={[styles.itemPrice, { color: theme.primary }]}>${item.totalPrice.toLocaleString()}</Text>
               </View>
-              <Text style={styles.itemSpecs}>
+              <Text style={[styles.itemSpecs, { color: theme.textSecondary }]}>
                 {item.carat} CT • {item.shape} • {item.color}/{item.clarity}
               </Text>
             </View>
@@ -408,11 +412,12 @@ export default function CheckoutScreen() {
         </View>
 
         {/* Delivery Address */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Teslimat Adresi *</Text>
+        <View style={[styles.section, { borderBottomColor: theme.borderLight }]}>
+          <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Teslimat Adresi *</Text>
           <TextInput
-            style={styles.textArea}
+            style={[styles.textArea, { backgroundColor: theme.backgroundCard, borderColor: theme.border, color: theme.textPrimary }]}
             placeholder="Tam adresinizi yazın..."
+            placeholderTextColor={theme.textDim}
             value={deliveryAddress}
             onChangeText={setDeliveryAddress}
             multiline
@@ -422,11 +427,12 @@ export default function CheckoutScreen() {
         </View>
 
         {/* Notes */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Notlar (Opsiyonel)</Text>
+        <View style={[styles.section, { borderBottomColor: theme.borderLight }]}>
+          <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Notlar (Opsiyonel)</Text>
           <TextInput
-            style={styles.textArea}
+            style={[styles.textArea, { backgroundColor: theme.backgroundCard, borderColor: theme.border, color: theme.textPrimary }]}
             placeholder="Tedarikçiye notunuz..."
+            placeholderTextColor={theme.textDim}
             value={notes}
             onChangeText={setNotes}
             multiline
@@ -439,13 +445,13 @@ export default function CheckoutScreen() {
       </ScrollView>
 
       {/* Bottom Bar */}
-      <View style={styles.bottomBar}>
+      <View style={[styles.bottomBar, { borderTopColor: theme.borderLight, backgroundColor: theme.backgroundCard }]}>
         <View style={styles.totalContainer}>
-          <Text style={styles.totalLabel}>Toplam</Text>
-          <Text style={styles.totalValue}>${totalPrice.toLocaleString()}</Text>
+          <Text style={[styles.totalLabel, { color: theme.textSecondary }]}>Toplam</Text>
+          <Text style={[styles.totalValue, { color: theme.textPrimary }]}>${totalPrice.toLocaleString()}</Text>
         </View>
         <TouchableOpacity
-          style={[styles.orderButton, loading && styles.orderButtonDisabled]}
+          style={[styles.orderButton, { backgroundColor: theme.success }, loading && styles.orderButtonDisabled]}
           onPress={handleCreateOrder}
           disabled={loading}
         >
@@ -456,7 +462,8 @@ export default function CheckoutScreen() {
           )}
         </TouchableOpacity>
       </View>
-    </View>
+      </View>
+    </ScreenWrapper>
   );
 }
 

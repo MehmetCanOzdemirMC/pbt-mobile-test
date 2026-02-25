@@ -12,6 +12,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import ApplyDiscountModal from '../../components/ApplyDiscountModal';
+import { useTheme } from '../../context/ThemeContext';
 
 interface OrderItem {
   stoneId: string;
@@ -45,6 +46,7 @@ interface Order {
 export default function OrderDetailScreen() {
   const route = useRoute();
   const navigation = useNavigation();
+  const { theme } = useTheme();
   const { orderId } = route.params as { orderId: string };
 
   const [order, setOrder] = useState<Order | null>(null);
@@ -122,31 +124,31 @@ export default function OrderDetailScreen() {
 
   if (loading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#007AFF" />
+      <View style={[styles.centered, { backgroundColor: theme.background }]}>
+        <ActivityIndicator size="large" color={theme.primary} />
       </View>
     );
   }
 
   if (!order) {
     return (
-      <View style={styles.centered}>
-        <Text style={styles.errorText}>Sipariş bulunamadı</Text>
+      <View style={[styles.centered, { backgroundColor: theme.background }]}>
+        <Text style={[styles.errorText, { color: theme.textDim }]}>Sipariş bulunamadı</Text>
       </View>
     );
   }
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={[styles.container, { backgroundColor: theme.background }]}>
       {/* Order Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: theme.backgroundCard, borderBottomColor: theme.border }]}>
         <View style={styles.headerRow}>
-          <Text style={styles.orderId}>#{order.orderId?.substring(0, 16) || order.id.substring(0, 8)}</Text>
+          <Text style={[styles.orderId, { color: theme.textPrimary }]}>#{order.orderId?.substring(0, 16) || order.id.substring(0, 8)}</Text>
           <View style={[styles.statusBadge, { backgroundColor: getStatusColor(order.status) }]}>
             <Text style={styles.statusText}>{getStatusText(order.status)}</Text>
           </View>
         </View>
-        <Text style={styles.date}>
+        <Text style={[styles.date, { color: theme.textSecondary }]}>
           {order.createdAt?.toDate?.()?.toLocaleDateString('tr-TR', {
             year: 'numeric',
             month: 'long',
@@ -159,42 +161,42 @@ export default function OrderDetailScreen() {
 
       {/* Buyer Info */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Alıcı Bilgileri</Text>
-        <View style={styles.infoCard}>
-          <Text style={styles.infoLabel}>İsim</Text>
-          <Text style={styles.infoValue}>{order.buyerName || 'N/A'}</Text>
+        <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Alıcı Bilgileri</Text>
+        <View style={[styles.infoCard, { backgroundColor: theme.backgroundCard }]}>
+          <Text style={[styles.infoLabel, { color: theme.textDim }]}>İsim</Text>
+          <Text style={[styles.infoValue, { color: theme.textPrimary }]}>{order.buyerName || 'N/A'}</Text>
 
           {order.buyerCompany && (
             <>
-              <Text style={styles.infoLabel}>Şirket</Text>
-              <Text style={styles.infoValue}>{order.buyerCompany}</Text>
+              <Text style={[styles.infoLabel, { color: theme.textDim }]}>Şirket</Text>
+              <Text style={[styles.infoValue, { color: theme.textPrimary }]}>{order.buyerCompany}</Text>
             </>
           )}
 
-          <Text style={styles.infoLabel}>E-posta</Text>
-          <Text style={styles.infoValue}>{order.buyerEmail || 'N/A'}</Text>
+          <Text style={[styles.infoLabel, { color: theme.textDim }]}>E-posta</Text>
+          <Text style={[styles.infoValue, { color: theme.textPrimary }]}>{order.buyerEmail || 'N/A'}</Text>
         </View>
       </View>
 
       {/* Items */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Taşlar ({order.items?.length || 0})</Text>
+        <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Taşlar ({order.items?.length || 0})</Text>
         {order.items?.map((item, index) => (
-          <View key={index} style={styles.itemCard}>
+          <View key={index} style={[styles.itemCard, { backgroundColor: theme.backgroundCard }]}>
             <View style={styles.itemHeader}>
-              <Text style={styles.itemShape}>{item.shape}</Text>
-              <Text style={styles.itemPrice}>
+              <Text style={[styles.itemShape, { color: theme.textPrimary }]}>{item.shape}</Text>
+              <Text style={[styles.itemPrice, { color: theme.primary }]}>
                 ${item.discountedPrice?.toLocaleString() || item.originalPrice?.toLocaleString() || 0}
               </Text>
             </View>
             <View style={styles.itemSpecs}>
-              <Text style={styles.itemSpec}>{item.carat} ct</Text>
-              <Text style={styles.itemSpec}>{item.color}</Text>
-              <Text style={styles.itemSpec}>{item.clarity}</Text>
-              {item.cut && <Text style={styles.itemSpec}>{item.cut}</Text>}
+              <Text style={[styles.itemSpec, { color: theme.textSecondary, backgroundColor: theme.background }]}>{item.carat} ct</Text>
+              <Text style={[styles.itemSpec, { color: theme.textSecondary, backgroundColor: theme.background }]}>{item.color}</Text>
+              <Text style={[styles.itemSpec, { color: theme.textSecondary, backgroundColor: theme.background }]}>{item.clarity}</Text>
+              {item.cut && <Text style={[styles.itemSpec, { color: theme.textSecondary, backgroundColor: theme.background }]}>{item.cut}</Text>}
             </View>
             {item.discountedPrice && item.discountedPrice < item.originalPrice && (
-              <Text style={styles.originalPrice}>
+              <Text style={[styles.originalPrice, { color: theme.textDim }]}>
                 Orijinal: ${item.originalPrice?.toLocaleString()}
               </Text>
             )}
@@ -204,23 +206,23 @@ export default function OrderDetailScreen() {
 
       {/* Price Summary */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Fiyat Özeti</Text>
-        <View style={styles.summaryCard}>
+        <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Fiyat Özeti</Text>
+        <View style={[styles.summaryCard, { backgroundColor: theme.backgroundCard }]}>
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Orijinal Toplam</Text>
-            <Text style={styles.summaryValue}>${order.originalTotal?.toLocaleString() || 0}</Text>
+            <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>Orijinal Toplam</Text>
+            <Text style={[styles.summaryValue, { color: theme.textPrimary }]}>${order.originalTotal?.toLocaleString() || 0}</Text>
           </View>
 
           {order.totalDiscount && order.totalDiscount > 0 && (
             <View style={[styles.summaryRow, styles.discountRow]}>
-              <Text style={styles.summaryLabel}>İndirim</Text>
-              <Text style={styles.discountValue}>-${order.totalDiscount?.toLocaleString()}</Text>
+              <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>İndirim</Text>
+              <Text style={[styles.discountValue, { color: theme.success }]}>-${order.totalDiscount?.toLocaleString()}</Text>
             </View>
           )}
 
           <View style={[styles.summaryRow, styles.totalRow]}>
-            <Text style={styles.totalLabel}>Toplam</Text>
-            <Text style={styles.totalValue}>${order.finalTotal?.toLocaleString() || 0}</Text>
+            <Text style={[styles.totalLabel, { color: theme.textPrimary }]}>Toplam</Text>
+            <Text style={[styles.totalValue, { color: theme.primary }]}>${order.finalTotal?.toLocaleString() || 0}</Text>
           </View>
         </View>
       </View>
@@ -229,7 +231,7 @@ export default function OrderDetailScreen() {
       {order.status === 'PENDING_OFFER' && (
         <View style={styles.actions}>
           <TouchableOpacity
-            style={styles.discountButton}
+            style={[styles.discountButton, { backgroundColor: theme.success }]}
             onPress={handleApplyDiscount}
           >
             <Text style={styles.discountButtonText}>İndirim Uygula</Text>

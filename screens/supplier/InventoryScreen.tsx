@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '../../config/firebase';
+import { useTheme } from '../../context/ThemeContext';
 
 interface Stone {
   id: string;
@@ -31,6 +32,7 @@ interface Stone {
  * Shows all stones uploaded by the supplier
  */
 export default function InventoryScreen() {
+  const { theme } = useTheme();
   const [stones, setStones] = useState<Stone[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -111,9 +113,9 @@ export default function InventoryScreen() {
 
   const renderStoneCard = ({ item }: { item: Stone }) => {
     const statusColor =
-      item.availability === 'available' ? '#4CAF50' :
-      item.availability === 'reserved' ? '#FF9800' :
-      '#9E9E9E';
+      item.availability === 'available' ? theme.success :
+      item.availability === 'reserved' ? theme.warning :
+      theme.textDim;
 
     const statusText =
       item.availability === 'available' ? 'Müsait' :
@@ -121,58 +123,58 @@ export default function InventoryScreen() {
       'Satıldı';
 
     return (
-      <View style={styles.card}>
+      <View style={[styles.card, { backgroundColor: theme.backgroundCard }]}>
         <View style={styles.cardHeader}>
-          <Text style={styles.shape}>{item.shape}</Text>
+          <Text style={[styles.shape, { color: theme.textPrimary }]}>{item.shape}</Text>
           <View style={[styles.statusBadge, { backgroundColor: statusColor }]}>
             <Text style={styles.statusText}>{statusText}</Text>
           </View>
         </View>
 
         <View style={styles.specs}>
-          <Text style={styles.spec}>{item.carat} ct</Text>
-          <Text style={styles.spec}>{item.color}</Text>
-          <Text style={styles.spec}>{item.clarity}</Text>
-          {item.cut && <Text style={styles.spec}>{item.cut}</Text>}
+          <Text style={[styles.spec, { color: theme.textSecondary, backgroundColor: theme.background }]}>{item.carat} ct</Text>
+          <Text style={[styles.spec, { color: theme.textSecondary, backgroundColor: theme.background }]}>{item.color}</Text>
+          <Text style={[styles.spec, { color: theme.textSecondary, backgroundColor: theme.background }]}>{item.clarity}</Text>
+          {item.cut && <Text style={[styles.spec, { color: theme.textSecondary, backgroundColor: theme.background }]}>{item.cut}</Text>}
         </View>
 
-        <Text style={styles.price}>${item.totalPrice?.toLocaleString() || '0'}</Text>
+        <Text style={[styles.price, { color: theme.primary }]}>${item.totalPrice?.toLocaleString() || '0'}</Text>
       </View>
     );
   };
 
   if (loading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#007AFF" />
+      <View style={[styles.centered, { backgroundColor: theme.background }]}>
+        <ActivityIndicator size="large" color={theme.primary} />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       {/* Stats Cards */}
-      <View style={styles.statsContainer}>
+      <View style={[styles.statsContainer, { backgroundColor: theme.backgroundCard, borderBottomColor: theme.border }]}>
         <View style={styles.statCard}>
-          <Text style={styles.statValue}>{stats.total}</Text>
-          <Text style={styles.statLabel}>Toplam</Text>
+          <Text style={[styles.statValue, { color: theme.primary }]}>{stats.total}</Text>
+          <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Toplam</Text>
         </View>
         <View style={styles.statCard}>
-          <Text style={[styles.statValue, { color: '#4CAF50' }]}>{stats.available}</Text>
-          <Text style={styles.statLabel}>Müsait</Text>
+          <Text style={[styles.statValue, { color: theme.success }]}>{stats.available}</Text>
+          <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Müsait</Text>
         </View>
         <View style={styles.statCard}>
-          <Text style={[styles.statValue, { color: '#FF9800' }]}>{stats.reserved}</Text>
-          <Text style={styles.statLabel}>Rezerve</Text>
+          <Text style={[styles.statValue, { color: theme.warning }]}>{stats.reserved}</Text>
+          <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Rezerve</Text>
         </View>
         <View style={styles.statCard}>
-          <Text style={[styles.statValue, { color: '#9E9E9E' }]}>{stats.sold}</Text>
-          <Text style={styles.statLabel}>Satıldı</Text>
+          <Text style={[styles.statValue, { color: theme.textDim }]}>{stats.sold}</Text>
+          <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Satıldı</Text>
         </View>
       </View>
 
       {/* Upload Button */}
-      <TouchableOpacity style={styles.uploadButton} onPress={handleCSVUpload}>
+      <TouchableOpacity style={[styles.uploadButton, { backgroundColor: theme.primary }]} onPress={handleCSVUpload}>
         <Text style={styles.uploadButtonText}>+ CSV Yükle</Text>
       </TouchableOpacity>
 
@@ -187,8 +189,8 @@ export default function InventoryScreen() {
         }
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Text style={styles.emptyText}>Henüz stok eklenmemiş</Text>
-            <Text style={styles.emptySubtext}>CSV yükleyerek stok ekleyin</Text>
+            <Text style={[styles.emptyText, { color: theme.textDim }]}>Henüz stok eklenmemiş</Text>
+            <Text style={[styles.emptySubtext, { color: theme.textDim }]}>CSV yükleyerek stok ekleyin</Text>
           </View>
         }
       />

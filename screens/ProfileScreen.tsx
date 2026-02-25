@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Image } from 'react-native';
 import { signOut } from 'firebase/auth';
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { useNavigation } from '@react-navigation/native';
 import { auth, db } from '../config/firebase';
 import { useCartStore } from '../stores/cartStore';
+import ScreenWrapper from '../components/ScreenWrapper';
+import { useTheme } from '../context/ThemeContext';
 
 export default function ProfileScreen() {
+  const { theme } = useTheme();
   const navigation = useNavigation();
   const user = auth.currentUser;
   const [userData, setUserData] = useState<any>(null);
@@ -126,108 +129,122 @@ export default function ProfileScreen() {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
-        <Text style={styles.loadingText}>Profil yükleniyor...</Text>
-      </View>
+      <ScreenWrapper>
+        <View style={[styles.loadingContainer, { backgroundColor: theme.background }]}>
+          <ActivityIndicator size="large" color={theme.primary} />
+          <Text style={[styles.loadingText, { color: theme.textSecondary }]}>Profil yükleniyor...</Text>
+        </View>
+      </ScreenWrapper>
     );
   }
 
   if (!userData) {
     return (
-      <View style={styles.loadingContainer}>
-        <Text style={styles.errorText}>Profil yüklenemedi</Text>
-      </View>
+      <ScreenWrapper>
+        <View style={[styles.loadingContainer, { backgroundColor: theme.background }]}>
+          <Text style={[styles.errorText, { color: theme.error }]}>Profil yüklenemedi</Text>
+        </View>
+      </ScreenWrapper>
     );
   }
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.emoji}>{getRoleIcon(userData.role)}</Text>
-        <Text style={styles.name}>
+    <ScreenWrapper>
+      <ScrollView style={[styles.container, { backgroundColor: theme.background }]}>
+      <View style={[styles.header, { backgroundColor: theme.backgroundCard, borderBottomColor: theme.border }]}>
+        {userData.photoURL ? (
+          <Image
+            source={{ uri: userData.photoURL }}
+            style={styles.profileImage}
+          />
+        ) : (
+          <View style={[styles.emojiContainer, { backgroundColor: theme.primary }]}>
+            <Text style={styles.emoji}>{getRoleIcon(userData.role)}</Text>
+          </View>
+        )}
+        <Text style={[styles.name, { color: theme.textPrimary }]}>
           {userData.name || 'N/A'} {userData.surname || ''}
         </Text>
-        <Text style={styles.email}>{user?.email}</Text>
-        <View style={styles.roleBadge}>
+        <Text style={[styles.email, { color: theme.textSecondary }]}>{user?.email}</Text>
+        <View style={[styles.roleBadge, { backgroundColor: theme.primary }]}>
           <Text style={styles.roleBadgeText}>{getRoleLabel(userData.role)}</Text>
         </View>
       </View>
 
       {/* Stats */}
-      <View style={styles.statsContainer}>
+      <View style={[styles.statsContainer, { backgroundColor: theme.backgroundCard }]}>
         <TouchableOpacity
           style={styles.statBox}
           onPress={() => (navigation as any).navigate('Cart')}
         >
-          <Text style={styles.statValue}>{totalItems()}</Text>
-          <Text style={styles.statLabel}>Sepet</Text>
+          <Text style={[styles.statValue, { color: theme.primary }]}>{totalItems()}</Text>
+          <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Sepet</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.statBox}
           onPress={() => (navigation as any).navigate('Favorites')}
         >
-          <Text style={styles.statValue}>❤️</Text>
-          <Text style={styles.statLabel}>Favoriler</Text>
+          <Text style={[styles.statValue, { color: theme.primary }]}>❤️</Text>
+          <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Favoriler</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.statBox}
           onPress={() => (navigation as any).navigate('Orders')}
         >
-          <Text style={styles.statValue}>{stats.orders}</Text>
-          <Text style={styles.statLabel}>Sipariş</Text>
+          <Text style={[styles.statValue, { color: theme.primary }]}>{stats.orders}</Text>
+          <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Sipariş</Text>
         </TouchableOpacity>
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Hesap Bilgileri</Text>
+      <View style={[styles.section, { backgroundColor: theme.backgroundCard }]}>
+        <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Hesap Bilgileri</Text>
 
         {userData.companyName && (
-          <View style={styles.infoRow}>
-            <Text style={styles.label}>🏢 Firma:</Text>
-            <Text style={styles.value}>{userData.companyName}</Text>
+          <View style={[styles.infoRow, { borderBottomColor: theme.borderLight }]}>
+            <Text style={[styles.label, { color: theme.textSecondary }]}>🏢 Firma:</Text>
+            <Text style={[styles.value, { color: theme.textPrimary }]}>{userData.companyName}</Text>
           </View>
         )}
 
         {userData.phone && (
-          <View style={styles.infoRow}>
-            <Text style={styles.label}>📞 Telefon:</Text>
-            <Text style={styles.value}>{userData.phone}</Text>
+          <View style={[styles.infoRow, { borderBottomColor: theme.borderLight }]}>
+            <Text style={[styles.label, { color: theme.textSecondary }]}>📞 Telefon:</Text>
+            <Text style={[styles.value, { color: theme.textPrimary }]}>{userData.phone}</Text>
           </View>
         )}
 
-        <View style={styles.infoRow}>
-          <Text style={styles.label}>📧 Email:</Text>
-          <Text style={styles.value}>{user?.email}</Text>
+        <View style={[styles.infoRow, { borderBottomColor: theme.borderLight }]}>
+          <Text style={[styles.label, { color: theme.textSecondary }]}>📧 Email:</Text>
+          <Text style={[styles.value, { color: theme.textPrimary }]}>{user?.email}</Text>
         </View>
 
-        <View style={styles.infoRow}>
-          <Text style={styles.label}>✅ Durum:</Text>
-          <Text style={styles.value}>{userData.membershipStatus || 'pending'}</Text>
+        <View style={[styles.infoRow, { borderBottomColor: theme.borderLight }]}>
+          <Text style={[styles.label, { color: theme.textSecondary }]}>✅ Durum:</Text>
+          <Text style={[styles.value, { color: theme.textPrimary }]}>{userData.membershipStatus || 'pending'}</Text>
         </View>
       </View>
 
       <TouchableOpacity
-        style={styles.editButton}
+        style={[styles.editButton, { backgroundColor: theme.primary }]}
         onPress={() => (navigation as any).navigate('ProfileEdit')}
       >
         <Text style={styles.editButtonText}>✏️ Profili Düzenle</Text>
       </TouchableOpacity>
 
       <TouchableOpacity
-        style={styles.settingsButton}
+        style={[styles.settingsButton, { backgroundColor: theme.success }]}
         onPress={() => (navigation as any).navigate('Settings')}
       >
         <Text style={styles.settingsButtonText}>⚙️ Ayarlar (Dil & Para Birimi)</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+      <TouchableOpacity style={[styles.logoutButton, { backgroundColor: theme.error }]} onPress={handleLogout}>
         <Text style={styles.logoutButtonText}>🚪 Çıkış Yap</Text>
       </TouchableOpacity>
 
-      <Text style={styles.footer}>✅ Veriler web sitesi ile senkron</Text>
-      <View style={{ height: 20 }} />
+      <Text style={[styles.footer, { color: theme.success }]}>✅ Veriler web sitesi ile senkron</Text>
     </ScrollView>
+    </ScreenWrapper>
   );
 }
 
@@ -258,9 +275,24 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
   },
-  emoji: {
-    fontSize: 64,
+  profileImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
     marginBottom: 12,
+    backgroundColor: '#f0f0f0',
+  },
+  emojiContainer: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: '#007AFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  emoji: {
+    fontSize: 48,
   },
   name: {
     fontSize: 24,

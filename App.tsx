@@ -7,6 +7,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { signInWithEmailAndPassword, onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { auth, db } from './config/firebase';
 import { useNotifications } from './hooks/useNotifications';
 import OnboardingScreen from './screens/OnboardingScreen';
@@ -27,6 +28,11 @@ import CheckoutScreen from './screens/CheckoutScreen';
 import OrderDetailScreen from './screens/supplier/OrderDetailScreen';
 import OrdersScreen from './screens/OrdersScreen';
 import SupplierDashboardScreen from './screens/SupplierDashboardScreen';
+import { useCartStore } from './stores/cartStore';
+import { useMessagingStore } from './stores/messagingStore';
+import { ThemeProvider, useTheme } from './context/ThemeContext';
+import { useFonts } from './hooks/useFonts';
+import { Home, Diamond, ShoppingCart, BarChart3, MessageCircle, Package, User } from 'lucide-react-native';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -113,6 +119,29 @@ function AppWithNotifications() {
 // Tab Navigator Component
 function MainTabs() {
   const [userData, setUserData] = useState<any>(null);
+  const insets = useSafeAreaInsets();
+  const { theme, isDark } = useTheme();
+  const { totalItems } = useCartStore();
+  const { conversations, loadConversations, stopListeningToConversations } = useMessagingStore();
+  const cartCount = totalItems();
+
+  // Calculate total unread messages
+  const unreadCount = Array.isArray(conversations)
+    ? conversations.reduce((total, conv) => total + (conv.unreadCount || 0), 0)
+    : 0;
+
+  // Debug: Log badge info
+  useEffect(() => {
+    console.log('🔔 [App] Badge Debug:', {
+      conversationsCount: conversations.length,
+      conversations: conversations.map(c => ({
+        id: c.id,
+        unreadCount: c.unreadCount,
+        lastMessage: c.lastMessage?.substring(0, 30)
+      })),
+      totalUnreadCount: unreadCount
+    });
+  }, [conversations, unreadCount]);
 
   // Fetch user data to determine role
   useEffect(() => {
@@ -132,6 +161,20 @@ function MainTabs() {
     fetchUserData();
   }, []);
 
+  // Start listening to conversations for badge count
+  useEffect(() => {
+    if (!auth.currentUser) return;
+
+    console.log('🔔 [App] Starting conversations listener for badge');
+    loadConversations();
+
+    // Cleanup when component unmounts
+    return () => {
+      console.log('🔕 [App] Stopping conversations listener');
+      stopListeningToConversations();
+    };
+  }, []);
+
   const isSupplier = userData?.role === 'supplierLocal' ||
                      userData?.role === 'supplierDropship' ||
                      userData?.role === 'supplierInternational';
@@ -139,25 +182,26 @@ function MainTabs() {
   return (
     <Tab.Navigator
       screenOptions={{
-        tabBarActiveTintColor: '#007AFF',
-        tabBarInactiveTintColor: '#999',
+        tabBarActiveTintColor: theme.primary,
+        tabBarInactiveTintColor: theme.textSecondary,
         tabBarStyle: {
-          backgroundColor: 'white',
+          backgroundColor: theme.backgroundCard,
           borderTopWidth: 1,
-          borderTopColor: '#e0e0e0',
-          paddingBottom: 5,
+          borderTopColor: theme.border,
+          paddingBottom: insets.bottom + 5, // Safe area + 5px padding
           paddingTop: 5,
-          height: 60,
+          height: 60 + insets.bottom, // Base height + safe area
         },
         headerStyle: {
-          backgroundColor: 'white',
+          backgroundColor: theme.backgroundCard,
           elevation: 0,
           shadowOpacity: 0,
           borderBottomWidth: 1,
-          borderBottomColor: '#e0e0e0',
+          borderBottomColor: theme.border,
         },
         headerTitleStyle: {
           fontWeight: 'bold',
+          color: theme.textPrimary,
         },
       }}
     >
@@ -169,7 +213,7 @@ function MainTabs() {
             options={{
               title: 'Ana Sayfa',
               tabBarLabel: 'Ana Sayfa',
-              tabBarIcon: () => <Text style={{ fontSize: 24 }}>🏠</Text>,
+              tabBarIcon: ({ color, size }) => <Home color={color} size={size} />,
             }}
           />
           <Tab.Screen
@@ -178,7 +222,7 @@ function MainTabs() {
             options={{
               title: 'Marketplace',
               tabBarLabel: 'Taşlar',
-              tabBarIcon: () => <Text style={{ fontSize: 24 }}>💎</Text>,
+              tabBarIcon: ({ color, size }) => <Diamond color={color} size={size} />,
             }}
           />
           <Tab.Screen
@@ -187,7 +231,15 @@ function MainTabs() {
             options={{
               title: 'Sepet',
               tabBarLabel: 'Sepet',
-              tabBarIcon: () => <Text style={{ fontSize: 24 }}>🛒</Text>,
+              tabBarIcon: ({ color, size }) => <ShoppingCart color={color} size={size} />,
+              tabBarBadge: cartCount > 0 ? cartCount : undefined,
+              tabBarBadgeStyle: {
+                backgroundColor: theme.error,
+                fontSize: 10,
+                minWidth: 18,
+                height: 18,
+                top: 2,
+              },
             }}
           />
         </>
@@ -199,7 +251,7 @@ function MainTabs() {
           options={{
             title: 'Stok & Satışlar',
             tabBarLabel: 'Dashboard',
-            tabBarIcon: () => <Text style={{ fontSize: 24 }}>📊</Text>,
+            tabBarIcon: ({ color, size }) => <BarChart3 color={color} size={size} />,
           }}
         />
       )}
@@ -209,7 +261,15 @@ function MainTabs() {
         options={{
           title: 'Mesajlar',
           tabBarLabel: 'Mesajlar',
-          tabBarIcon: () => <Text style={{ fontSize: 24 }}>💬</Text>,
+          tabBarIcon: ({ color, size }) => <MessageCircle color={color} size={size} />,
+          tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
+          tabBarBadgeStyle: {
+            backgroundColor: theme.error,
+            fontSize: 10,
+            minWidth: 18,
+            height: 18,
+            top: 2,
+          },
         }}
       />
       <Tab.Screen
@@ -218,7 +278,7 @@ function MainTabs() {
         options={{
           title: 'Siparişler',
           tabBarLabel: 'Siparişler',
-          tabBarIcon: () => <Text style={{ fontSize: 24 }}>📦</Text>,
+          tabBarIcon: ({ color, size }) => <Package color={color} size={size} />,
         }}
       />
       <Tab.Screen
@@ -227,7 +287,7 @@ function MainTabs() {
         options={{
           title: 'Profil',
           tabBarLabel: 'Profil',
-          tabBarIcon: () => <Text style={{ fontSize: 24 }}>👤</Text>,
+          tabBarIcon: ({ color, size }) => <User color={color} size={size} />,
         }}
       />
     </Tab.Navigator>
@@ -235,6 +295,7 @@ function MainTabs() {
 }
 
 export default function App() {
+  const fontsLoaded = useFonts();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -309,7 +370,7 @@ export default function App() {
     }
   };
 
-  if (loading || checkingOnboarding) {
+  if (loading || checkingOnboarding || !fontsLoaded) {
     return (
       <View style={styles.container}>
         <ActivityIndicator size="large" color="#007AFF" />
@@ -320,27 +381,35 @@ export default function App() {
   // Show onboarding if needed
   if (showOnboarding && user) {
     return (
-      <>
-        <StatusBar style="light" />
-        <OnboardingScreen onComplete={() => setShowOnboarding(false)} />
-      </>
+      <ThemeProvider>
+        <SafeAreaProvider>
+          <StatusBar style="light" />
+          <OnboardingScreen onComplete={() => setShowOnboarding(false)} />
+        </SafeAreaProvider>
+      </ThemeProvider>
     );
   }
 
   // Giriş yapılmışsa Stack Navigator göster (Tab Navigator + Conversation + DiamondDetail)
   if (user) {
     return (
-      <NavigationContainer>
-        <StatusBar style="auto" />
-        <AppWithNotifications />
-      </NavigationContainer>
+      <ThemeProvider>
+        <SafeAreaProvider>
+          <NavigationContainer>
+            <StatusBar style="auto" />
+            <AppWithNotifications />
+          </NavigationContainer>
+        </SafeAreaProvider>
+      </ThemeProvider>
     );
   }
 
   // Login ekranı
   return (
-    <View style={styles.container}>
-      <StatusBar style="auto" />
+    <ThemeProvider>
+      <SafeAreaProvider>
+        <View style={styles.container}>
+        <StatusBar style="auto" />
 
       <View style={styles.loginContainer}>
         <Text style={styles.logo}>💎 PBT Mobile Test</Text>
@@ -381,7 +450,9 @@ export default function App() {
           ℹ️ Web sitenizdeki mevcut hesabınızla test edin
         </Text>
       </View>
-    </View>
+      </View>
+    </SafeAreaProvider>
+    </ThemeProvider>
   );
 }
 

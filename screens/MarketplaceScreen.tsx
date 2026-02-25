@@ -11,13 +11,15 @@ import {
   TextInput,
 } from 'react-native';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
-import { collection, query, limit, getDocs, orderBy, where } from 'firebase/firestore';
-import { db } from '../config/firebase';
+import { Heart, Check, Clock, SlidersHorizontal } from 'lucide-react-native';
 import { useCartStore } from '../stores/cartStore';
 import { useFavoritesStore } from '../stores/favoritesStore';
 import { useCompareStore } from '../stores/compareStore';
+import { useMarketplaceStore } from '../stores/marketplaceStore';
 import StoneDetailModal from '../components/StoneDetailModal';
 import FilterSheet, { Filters, FilterSheetRef } from '../components/FilterSheet';
+import ScreenWrapper from '../components/ScreenWrapper';
+import { useTheme } from '../context/ThemeContext';
 
 type RootStackParamList = {
   Home: undefined;
@@ -47,10 +49,8 @@ interface Stone {
 }
 
 export default function MarketplaceScreen() {
+  const { theme } = useTheme();
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
-  const [allStones, setAllStones] = useState<Stone[]>([]); // Tüm taşlar
-  const [stones, setStones] = useState<Stone[]>([]); // Gösterilen taşlar
-  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedStone, setSelectedStone] = useState<Stone | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
@@ -72,114 +72,84 @@ export default function MarketplaceScreen() {
   const { addToFavorites, removeFromFavorites, isFavorite, loadFavorites } = useFavoritesStore();
   const { compareList } = useCompareStore();
 
+  // Use marketplace store for real-time updates
+  const {
+    diamonds,
+    filteredDiamonds,
+    loading,
+    loadDiamonds,
+    applyFilters: applyMarketplaceFilters,
+  } = useMarketplaceStore();
+
+  // Load diamonds on mount
   useEffect(() => {
-    loadStones();
+    console.log('📱 MarketplaceScreen: Loading diamonds...');
+    loadDiamonds();
     loadCart();
     loadFavorites();
+  }, []);
+
+  // Apply filters when they change
+  useEffect(() => {
+    console.log('🔍 MarketplaceScreen: Applying filters...', filters);
+
+    // Convert Filters to MarketplaceFilters format
+    const marketplaceFilters: any = {};
+
+    if (filters.shape.length > 0) {
+      marketplaceFilters.shape = filters.shape;
+    }
+
+    if (filters.color.length > 0) {
+      marketplaceFilters.color = filters.color;
+    }
+
+    if (filters.clarity.length > 0) {
+      marketplaceFilters.clarity = filters.clarity;
+    }
+
+    if (filters.caratMin) {
+      marketplaceFilters.caratMin = parseFloat(filters.caratMin);
+    }
+
+    if (filters.caratMax) {
+      marketplaceFilters.caratMax = parseFloat(filters.caratMax);
+    }
+
+    if (searchQuery.trim()) {
+      marketplaceFilters.searchQuery = searchQuery;
+    }
+
+    applyMarketplaceFilters(marketplaceFilters);
   }, [filters, searchQuery]);
 
-  useEffect(() => {
-    // Sayfa değiştiğinde gösterilen taşları güncelle
-    paginateStones();
-  }, [currentPage, allStones]);
+  // Convert marketplace diamonds to Stone format
+  const allStones: Stone[] = filteredDiamonds.map(d => ({
+    id: d.id,
+    stoneId: d.stoneId || d.certificateNo || d.JTRCertificateNo || d.id.slice(0, 8),
+    carat: d.carat,
+    shape: d.shape,
+    color: d.color,
+    clarity: d.clarity,
+    cut: d.cut,
+    polish: d.polish,
+    symmetry: d.symmetry,
+    totalPrice: d.totalPrice,
+    pricePerCarat: d.pricePerCarat,
+    availability: d.status === 'available' ? 'available' : 'reserved',
+    supplierId: d.ownerId,
+    supplierName: d.ownerName || d.companyName,
+  }));
 
-  const paginateStones = () => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    const endIndex = startIndex + ITEMS_PER_PAGE;
-    setStones(allStones.slice(startIndex, endIndex));
-  };
-
-  const loadStones = async () => {
-    try {
-      setLoading(true);
-      const stonesRef = collection(db, 'stones');
-
-      // Build query constraints
-      const constraints: any[] = [];
-
-      // Shape filter
-      if (filters.shape.length > 0) {
-        constraints.push(where('shape', 'in', filters.shape));
-      }
-
-      // Color filter
-      if (filters.color.length > 0) {
-        constraints.push(where('color', 'in', filters.color));
-      }
-
-      // Clarity filter
-      if (filters.clarity.length > 0) {
-        constraints.push(where('clarity', 'in', filters.clarity));
-      }
-
-      // Sort order
-      const sortField = filters.sortBy.includes('price') ? 'totalPrice' :
-                       filters.sortBy.includes('carat') ? 'carat' : 'createdAt';
-      const sortDirection = filters.sortBy.includes('desc') ? 'desc' : 'asc';
-      constraints.push(orderBy(sortField, sortDirection));
-
-      // Limit - artık daha fazla taş getiriyoruz
-      constraints.push(limit(1000));
-
-      const q = query(stonesRef, ...constraints);
-      const snapshot = await getDocs(q);
-      let stonesData: Stone[] = [];
-
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        stonesData.push({
-          id: doc.id,
-          stoneId: data.stoneId || data.stockId || 'N/A',
-          carat: data.carat || 0,
-          shape: data.shape || 'Unknown',
-          color: data.color || 'N/A',
-          clarity: data.clarity || 'N/A',
-          cut: data.cut,
-          polish: data.polish,
-          symmetry: data.symmetry,
-          totalPrice: data.totalPrice || data.price || 0,
-          pricePerCarat: data.pricePerCarat || 0,
-          availability: data.availability || data.availability || 'available',
-          supplierId: data.supplierId || '',
-          supplierName: data.supplierName,
-        });
-      });
-
-      // Filter out reserved stones
-      stonesData = stonesData.filter(s => s.availability !== 'reserved');
-
-      // Client-side filters (for carat range and search)
-      if (filters.caratMin) {
-        const minCarat = parseFloat(filters.caratMin);
-        stonesData = stonesData.filter(s => s.carat >= minCarat);
-      }
-
-      if (filters.caratMax) {
-        const maxCarat = parseFloat(filters.caratMax);
-        stonesData = stonesData.filter(s => s.carat <= maxCarat);
-      }
-
-      if (searchQuery.trim()) {
-        const query = searchQuery.toLowerCase();
-        stonesData = stonesData.filter(s =>
-          s.stoneId.toLowerCase().includes(query) ||
-          s.supplierName?.toLowerCase().includes(query)
-        );
-      }
-
-      setAllStones(stonesData);
-      setCurrentPage(1); // Reset to first page when data changes
-    } catch (error) {
-      console.error('Error loading stones:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Pagination
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const stones = allStones.slice(startIndex, endIndex);
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadStones();
-    setRefreshing(false);
+    loadDiamonds();
+    setTimeout(() => setRefreshing(false), 1000);
   };
 
   const handleStonePress = (stone: Stone) => {
@@ -241,70 +211,88 @@ export default function MarketplaceScreen() {
   };
 
   const renderStoneCard = ({ item }: { item: Stone }) => (
-    <TouchableOpacity style={styles.card} onPress={() => handleStonePress(item)}>
-      <View style={styles.cardHeader}>
-        <Text style={styles.stoneId}>💎 {item.stoneId}</Text>
+    <TouchableOpacity style={[styles.card, { backgroundColor: theme.backgroundCard }]} onPress={() => handleStonePress(item)}>
+      <View style={[styles.cardHeader, { borderBottomColor: theme.borderLight }]}>
+        <Text style={[styles.stoneId, { color: theme.textPrimary }]}>💎 {item.stoneId}</Text>
         <View style={styles.cardHeaderRight}>
           <TouchableOpacity
-            style={styles.favoriteButton}
+            style={[
+              styles.favoriteButton,
+              { backgroundColor: isFavorite(item.id) ? theme.error + '15' : theme.border }
+            ]}
             onPress={() => handleToggleFavorite(item)}
           >
-            <Text style={styles.favoriteIcon}>
-              {isFavorite(item.id) ? '❤️' : '🤍'}
-            </Text>
+            <Heart
+              size={16}
+              color={isFavorite(item.id) ? theme.error : theme.textDim}
+              fill={isFavorite(item.id) ? theme.error : 'transparent'}
+            />
           </TouchableOpacity>
-          <Text style={[
+          <View style={[
             styles.availabilityBadge,
-            item.availability === 'available' ? styles.availabilityAvailable : styles.availabilityReserved
+            {
+              backgroundColor: item.availability === 'available' ? theme.success + '20' : theme.warning + '20'
+            }
           ]}>
-            {item.availability === 'available' ? '✓ Mevcut' : '⏳ Rezerve'}
-          </Text>
+            {item.availability === 'available' ? (
+              <Check size={12} color={theme.success} strokeWidth={3} />
+            ) : (
+              <Clock size={12} color={theme.warning} strokeWidth={2.5} />
+            )}
+            <Text style={[
+              styles.availabilityText,
+              { color: item.availability === 'available' ? theme.success : theme.warning }
+            ]}>
+              {item.availability === 'available' ? 'Mevcut' : 'Rezerve'}
+            </Text>
+          </View>
         </View>
       </View>
 
       <View style={styles.cardBody}>
-        <View style={styles.row}>
-          <Text style={styles.label}>Şekil:</Text>
-          <Text style={styles.value}>{item.shape}</Text>
+        <View style={[styles.row, { borderBottomColor: theme.borderLight }]}>
+          <Text style={[styles.label, { color: theme.textSecondary }]}>Şekil:</Text>
+          <Text style={[styles.value, { color: theme.textPrimary }]}>{item.shape}</Text>
         </View>
 
-        <View style={styles.row}>
-          <Text style={styles.label}>Karat:</Text>
-          <Text style={styles.value}>{item.carat.toFixed(2)} CT</Text>
+        <View style={[styles.row, { borderBottomColor: theme.borderLight }]}>
+          <Text style={[styles.label, { color: theme.textSecondary }]}>Karat:</Text>
+          <Text style={[styles.value, { color: theme.textPrimary }]}>{item.carat.toFixed(2)} CT</Text>
         </View>
 
-        <View style={styles.row}>
-          <Text style={styles.label}>Renk:</Text>
-          <Text style={styles.value}>{item.color}</Text>
+        <View style={[styles.row, { borderBottomColor: theme.borderLight }]}>
+          <Text style={[styles.label, { color: theme.textSecondary }]}>Renk:</Text>
+          <Text style={[styles.value, { color: theme.textPrimary }]}>{item.color}</Text>
         </View>
 
-        <View style={styles.row}>
-          <Text style={styles.label}>Berraklık:</Text>
-          <Text style={styles.value}>{item.clarity}</Text>
+        <View style={[styles.row, { borderBottomColor: theme.borderLight }]}>
+          <Text style={[styles.label, { color: theme.textSecondary }]}>Berraklık:</Text>
+          <Text style={[styles.value, { color: theme.textPrimary }]}>{item.clarity}</Text>
         </View>
 
         {item.cut && (
-          <View style={styles.row}>
-            <Text style={styles.label}>Kesim:</Text>
-            <Text style={styles.value}>{item.cut}</Text>
+          <View style={[styles.row, { borderBottomColor: theme.borderLight }]}>
+            <Text style={[styles.label, { color: theme.textSecondary }]}>Kesim:</Text>
+            <Text style={[styles.value, { color: theme.textPrimary }]}>{item.cut}</Text>
           </View>
         )}
       </View>
 
-      <View style={styles.cardFooter}>
+      <View style={[styles.cardFooter, { backgroundColor: theme.background }]}>
         <View>
-          <Text style={styles.priceLabel}>Toplam Fiyat</Text>
-          <Text style={styles.price}>${item.totalPrice.toLocaleString()}</Text>
+          <Text style={[styles.priceLabel, { color: theme.textSecondary }]}>Toplam Fiyat</Text>
+          <Text style={[styles.price, { color: theme.primary }]}>${item.totalPrice.toLocaleString()}</Text>
         </View>
         <View style={styles.pricePerCaratContainer}>
-          <Text style={styles.pricePerCaratLabel}>$/CT</Text>
-          <Text style={styles.pricePerCarat}>${item.pricePerCarat.toLocaleString()}</Text>
+          <Text style={[styles.pricePerCaratLabel, { color: theme.textDim }]}>$/CT</Text>
+          <Text style={[styles.pricePerCarat, { color: theme.textSecondary }]}>${item.pricePerCarat.toLocaleString()}</Text>
         </View>
       </View>
 
       <TouchableOpacity
         style={[
           styles.addToCartButton,
+          { backgroundColor: theme.primary },
           item.availability !== 'available' && styles.addToCartButtonDisabled
         ]}
         onPress={() => handleAddToCart(item)}
@@ -319,35 +307,37 @@ export default function MarketplaceScreen() {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
-        <Text style={styles.loadingText}>Taşlar yükleniyor...</Text>
+      <View style={[styles.loadingContainer, { backgroundColor: theme.background }]}>
+        <ActivityIndicator size="large" color={theme.primary} />
+        <Text style={[styles.loadingText, { color: theme.textSecondary }]}>Taşlar yükleniyor...</Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.searchContainer}>
+    <ScreenWrapper>
+      <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <View style={[styles.searchContainer, { backgroundColor: theme.backgroundCard, borderBottomColor: theme.border }]}>
         <TextInput
-          style={styles.searchInput}
+          style={[styles.searchInput, { backgroundColor: theme.background, color: theme.textPrimary }]}
           placeholder="Stock ID veya Tedarikçi Ara..."
+          placeholderTextColor={theme.textDim}
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
         <TouchableOpacity
-          style={styles.filterButton}
+          style={[styles.filterButton, { backgroundColor: theme.primary }]}
           onPress={() => filterSheetRef.current?.open()}
         >
-          <Text style={styles.filterButtonText}>🔍</Text>
+          <SlidersHorizontal size={20} color="white" strokeWidth={2.5} />
         </TouchableOpacity>
       </View>
 
-      <View style={styles.statsBar}>
-        <Text style={styles.statsText}>
+      <View style={[styles.statsBar, { backgroundColor: theme.backgroundCard, borderBottomColor: theme.border }]}>
+        <Text style={[styles.statsText, { color: theme.textSecondary }]}>
           📊 Toplam {allStones.length} Taş ({stones.length} gösteriliyor)
         </Text>
-        <Text style={styles.statsText}>
+        <Text style={[styles.statsText, { color: theme.textSecondary }]}>
           ✓ {allStones.filter(s => s.availability === 'available').length} Mevcut
         </Text>
       </View>
@@ -362,20 +352,20 @@ export default function MarketplaceScreen() {
         }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>Henüz taş bulunmuyor</Text>
+            <Text style={[styles.emptyText, { color: theme.textDim }]}>Henüz taş bulunmuyor</Text>
           </View>
         }
       />
 
       {/* Pagination Controls */}
       {allStones.length > ITEMS_PER_PAGE && (
-        <View style={styles.paginationContainer}>
+        <View style={[styles.paginationContainer, { backgroundColor: theme.backgroundCard, borderTopColor: theme.border }]}>
           <TouchableOpacity
-            style={[styles.pageButton, currentPage === 1 && styles.pageButtonDisabled]}
+            style={[styles.pageButton, { backgroundColor: theme.background }, currentPage === 1 && styles.pageButtonDisabled]}
             onPress={() => setCurrentPage(currentPage - 1)}
             disabled={currentPage === 1}
           >
-            <Text style={styles.pageButtonText}>←</Text>
+            <Text style={[styles.pageButtonText, { color: theme.textPrimary }]}>←</Text>
           </TouchableOpacity>
 
           {Array.from({ length: Math.ceil(allStones.length / ITEMS_PER_PAGE) }, (_, i) => i + 1)
@@ -395,17 +385,19 @@ export default function MarketplaceScreen() {
               return (
                 <React.Fragment key={page}>
                   {showEllipsis && (
-                    <Text style={styles.ellipsis}>...</Text>
+                    <Text style={[styles.ellipsis, { color: theme.textDim }]}>...</Text>
                   )}
                   <TouchableOpacity
                     style={[
                       styles.pageButton,
-                      currentPage === page && styles.pageButtonActive
+                      { backgroundColor: theme.background },
+                      currentPage === page && [styles.pageButtonActive, { backgroundColor: theme.primary }]
                     ]}
                     onPress={() => setCurrentPage(page)}
                   >
                     <Text style={[
                       styles.pageButtonText,
+                      { color: theme.textPrimary },
                       currentPage === page && styles.pageButtonTextActive
                     ]}>
                       {page}
@@ -418,28 +410,20 @@ export default function MarketplaceScreen() {
           <TouchableOpacity
             style={[
               styles.pageButton,
+              { backgroundColor: theme.background },
               currentPage === Math.ceil(allStones.length / ITEMS_PER_PAGE) && styles.pageButtonDisabled
             ]}
             onPress={() => setCurrentPage(currentPage + 1)}
             disabled={currentPage === Math.ceil(allStones.length / ITEMS_PER_PAGE)}
           >
-            <Text style={styles.pageButtonText}>→</Text>
+            <Text style={[styles.pageButtonText, { color: theme.textPrimary }]}>→</Text>
           </TouchableOpacity>
         </View>
       )}
 
-      {totalItems() > 0 && (
-        <TouchableOpacity
-          style={styles.floatingCartBadge}
-          onPress={() => navigation.navigate('Cart')}
-        >
-          <Text style={styles.floatingCartText}>🛒 {totalItems()}</Text>
-        </TouchableOpacity>
-      )}
-
       {compareList.length > 0 && (
         <TouchableOpacity
-          style={styles.floatingCompareBadge}
+          style={[styles.floatingCompareBadge, { backgroundColor: theme.success }]}
           onPress={() => (navigation as any).navigate('Compare')}
         >
           <Text style={styles.floatingCompareText}>⚖️ {compareList.length}</Text>
@@ -460,7 +444,8 @@ export default function MarketplaceScreen() {
         onApplyFilters={setFilters}
         ref={filterSheetRef}
       />
-    </View>
+      </View>
+    </ScreenWrapper>
   );
 }
 
@@ -552,17 +537,26 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   favoriteButton: {
-    padding: 4,
+    padding: 6,
+    borderRadius: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   favoriteIcon: {
     fontSize: 20,
   },
   availabilityBadge: {
-    fontSize: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
     overflow: 'hidden',
+  },
+  availabilityText: {
+    fontSize: 11,
+    fontWeight: '600',
   },
   availabilityAvailable: {
     backgroundColor: '#e8f5e9',
@@ -649,25 +643,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
   },
-  floatingCartBadge: {
-    position: 'absolute',
-    bottom: 20,
-    right: 20,
-    backgroundColor: '#007AFF',
-    borderRadius: 30,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 8,
-  },
-  floatingCartText: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
   floatingCompareBadge: {
     position: 'absolute',
     bottom: 80,
@@ -691,21 +666,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 16,
+    paddingVertical: 10,
     paddingHorizontal: 8,
     backgroundColor: 'white',
     borderTopWidth: 1,
     borderTopColor: '#e0e0e0',
-    gap: 8,
+    gap: 6,
   },
   pageButton: {
-    minWidth: 40,
-    height: 40,
+    minWidth: 32,
+    height: 32,
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 8,
+    borderRadius: 6,
     backgroundColor: '#f5f5f5',
-    paddingHorizontal: 12,
+    paddingHorizontal: 8,
   },
   pageButtonActive: {
     backgroundColor: '#007AFF',
@@ -715,7 +690,7 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   pageButtonText: {
-    fontSize: 14,
+    fontSize: 10,
     fontWeight: '600',
     color: '#333',
   },
@@ -723,7 +698,7 @@ const styles = StyleSheet.create({
     color: 'white',
   },
   ellipsis: {
-    fontSize: 16,
+    fontSize: 11,
     color: '#999',
     paddingHorizontal: 4,
   },

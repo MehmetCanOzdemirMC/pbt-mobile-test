@@ -13,6 +13,7 @@ import { auth, db } from '../../config/firebase';
 import CreateDiscountModal from '../../components/CreateDiscountModal';
 import StockDiscountModal from '../../components/StockDiscountModal';
 import ViewDiscountModal from '../../components/ViewDiscountModal';
+import { useTheme } from '../../context/ThemeContext';
 
 interface Discount {
   id: string;
@@ -33,6 +34,7 @@ interface Discount {
  * Shows active and past discounts
  */
 export default function DiscountsScreen() {
+  const { theme } = useTheme();
   const [discounts, setDiscounts] = useState<Discount[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -94,16 +96,16 @@ export default function DiscountsScreen() {
 
   const renderDiscountCard = ({ item }: { item: Discount }) => {
     const isExpired = item.expiresAt?.toDate?.() < new Date();
-    const statusColor = item.used ? '#9E9E9E' : isExpired ? '#F44336' : '#4CAF50';
+    const statusColor = item.used ? theme.textDim : isExpired ? theme.error : theme.success;
     const statusText = item.used ? 'Kullanıldı' : isExpired ? 'Süresi Doldu' : 'Aktif';
     const discountValue = item.discountPercent || item.percentage || 0;
 
     return (
-      <TouchableOpacity style={styles.card} onPress={() => handleViewDiscount(item)}>
+      <TouchableOpacity style={[styles.card, { backgroundColor: theme.backgroundCard }]} onPress={() => handleViewDiscount(item)}>
         <View style={styles.cardHeader}>
           <View style={styles.percentageContainer}>
-            <Text style={styles.percentage}>%{discountValue}</Text>
-            <Text style={styles.percentageLabel}>İndirim</Text>
+            <Text style={[styles.percentage, { color: theme.primary }]}>%{discountValue}</Text>
+            <Text style={[styles.percentageLabel, { color: theme.textSecondary }]}>İndirim</Text>
           </View>
           <View style={[styles.statusBadge, { backgroundColor: statusColor }]}>
             <Text style={styles.statusText}>{statusText}</Text>
@@ -111,20 +113,20 @@ export default function DiscountsScreen() {
         </View>
 
         {item.customerName && (
-          <Text style={styles.customer}>Müşteri: {item.customerName}</Text>
+          <Text style={[styles.customer, { color: theme.textPrimary }]}>Müşteri: {item.customerName}</Text>
         )}
 
         {item.stoneIds && item.stoneIds.length > 0 && (
-          <Text style={styles.stoneCount}>📦 {item.stoneIds.length} taş seçildi</Text>
+          <Text style={[styles.stoneCount, { color: theme.textSecondary, backgroundColor: theme.background }]}>📦 {item.stoneIds.length} taş seçildi</Text>
         )}
 
-        <View style={styles.footer}>
-          <Text style={styles.date}>
+        <View style={[styles.footer, { borderTopColor: theme.borderLight }]}>
+          <Text style={[styles.date, { color: theme.textDim }]}>
             {item.startDate ? `${item.startDate} — ${item.endDate}` :
              `Oluşturma: ${item.createdAt?.toDate?.()?.toLocaleDateString('tr-TR') || ''}`}
           </Text>
           {item.expiresAt && (
-            <Text style={styles.date}>
+            <Text style={[styles.date, { color: theme.textDim }]}>
               Son Gün: {item.expiresAt?.toDate?.()?.toLocaleDateString('tr-TR') || ''}
             </Text>
           )}
@@ -135,24 +137,24 @@ export default function DiscountsScreen() {
 
   if (loading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#007AFF" />
+      <View style={[styles.centered, { backgroundColor: theme.background }]}>
+        <ActivityIndicator size="large" color={theme.primary} />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       {/* Create Buttons */}
       <View style={styles.buttonsContainer}>
         <TouchableOpacity
-          style={[styles.createButton, styles.primaryButton]}
+          style={[styles.createButton, { backgroundColor: theme.success }]}
           onPress={handleCreateStockDiscount}
         >
           <Text style={styles.createButtonText}>💎 Stok İndirimi</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.createButton, styles.secondaryButton]}
+          style={[styles.createButton, { backgroundColor: theme.primary }]}
           onPress={handleCreateDiscount}
         >
           <Text style={styles.createButtonText}>📋 Müşteri İndirimi</Text>
@@ -170,8 +172,8 @@ export default function DiscountsScreen() {
         }
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Text style={styles.emptyText}>Henüz indirim oluşturulmamış</Text>
-            <Text style={styles.emptySubtext}>Müşterilere özel indirim tanımlayın</Text>
+            <Text style={[styles.emptyText, { color: theme.textDim }]}>Henüz indirim oluşturulmamış</Text>
+            <Text style={[styles.emptySubtext, { color: theme.textDim }]}>Müşterilere özel indirim tanımlayın</Text>
           </View>
         }
       />

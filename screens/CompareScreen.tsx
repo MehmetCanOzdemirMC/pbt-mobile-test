@@ -2,21 +2,23 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useCompareStore } from '../stores/compareStore';
+import { useTheme } from '../context/ThemeContext';
 
 export default function CompareScreen() {
   const navigation = useNavigation();
+  const { theme } = useTheme();
   const { compareList, removeFromCompare, clearCompare } = useCompareStore();
 
   if (compareList.length === 0) {
     return (
-      <View style={styles.emptyContainer}>
+      <View style={[styles.emptyContainer, { backgroundColor: theme.background }]}>
         <Text style={styles.emptyIcon}>⚖️</Text>
-        <Text style={styles.emptyTitle}>Karşılaştırılacak taş yok</Text>
-        <Text style={styles.emptyText}>
+        <Text style={[styles.emptyTitle, { color: theme.textPrimary }]}>Karşılaştırılacak taş yok</Text>
+        <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
           Marketplace'den taşları seçerek karşılaştırma yapabilirsiniz
         </Text>
         <TouchableOpacity
-          style={styles.browseButton}
+          style={[styles.browseButton, { backgroundColor: theme.primary }]}
           onPress={() => (navigation as any).navigate('Marketplace')}
         >
           <Text style={styles.browseButtonText}>Taşlara Gözat</Text>
@@ -39,9 +41,9 @@ export default function CompareScreen() {
   ];
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>⚖️ Karşılaştırma</Text>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <View style={[styles.header, { backgroundColor: theme.backgroundCard, borderBottomColor: theme.border }]}>
+        <Text style={[styles.headerTitle, { color: theme.textPrimary }]}>⚖️ Karşılaştırma</Text>
         <TouchableOpacity
           onPress={() => {
             Alert.alert('Tümünü Temizle', 'Tüm karşılaştırmaları silmek istiyor musunuz?', [
@@ -54,19 +56,19 @@ export default function CompareScreen() {
             ]);
           }}
         >
-          <Text style={styles.clearButton}>🗑️ Temizle</Text>
+          <Text style={[styles.clearButton, { color: theme.error }]}>🗑️ Temizle</Text>
         </TouchableOpacity>
       </View>
 
       <ScrollView horizontal style={styles.tableContainer}>
         <View>
           {/* Header Row */}
-          <View style={styles.tableRow}>
-            <View style={[styles.labelCell, styles.headerCell]}>
+          <View style={[styles.tableRow, { borderBottomColor: theme.border }]}>
+            <View style={[styles.labelCell, styles.headerCell, { backgroundColor: theme.primary }]}>
               <Text style={styles.headerText}>Özellik</Text>
             </View>
             {compareList.map((stone) => (
-              <View key={stone.id} style={[styles.valueCell, styles.headerCell]}>
+              <View key={stone.id} style={[styles.valueCell, styles.headerCell, { backgroundColor: theme.primary }]}>
                 <Text style={styles.headerText} numberOfLines={1}>
                   {stone.stoneId}
                 </Text>
@@ -84,17 +86,17 @@ export default function CompareScreen() {
           {specs.map((spec, index) => (
             <View
               key={spec.key}
-              style={[styles.tableRow, index % 2 === 0 && styles.tableRowEven]}
+              style={[styles.tableRow, { borderBottomColor: theme.border }, index % 2 === 0 && { backgroundColor: theme.backgroundCard }]}
             >
-              <View style={styles.labelCell}>
-                <Text style={styles.labelText}>{spec.label}</Text>
+              <View style={[styles.labelCell, { backgroundColor: theme.backgroundCard, borderRightColor: theme.border }]}>
+                <Text style={[styles.labelText, { color: theme.textPrimary }]}>{spec.label}</Text>
               </View>
               {compareList.map((stone) => {
                 const value = (stone as any)[spec.key];
                 const displayValue = spec.format && value ? spec.format(value) : value || '-';
                 return (
-                  <View key={stone.id} style={styles.valueCell}>
-                    <Text style={styles.valueText}>{displayValue}</Text>
+                  <View key={stone.id} style={[styles.valueCell, { backgroundColor: theme.backgroundCard, borderRightColor: theme.border }]}>
+                    <Text style={[styles.valueText, { color: theme.textSecondary }]}>{displayValue}</Text>
                   </View>
                 );
               })}

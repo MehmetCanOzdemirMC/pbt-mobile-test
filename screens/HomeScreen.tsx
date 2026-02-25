@@ -3,8 +3,11 @@ import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-nat
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../config/firebase';
 import SupplierDashboardScreen from './SupplierDashboardScreen';
+import ScreenWrapper from '../components/ScreenWrapper';
+import { useTheme } from '../context/ThemeContext';
 
 export default function HomeScreen() {
+  const { theme } = useTheme();
   const user = auth.currentUser;
   const [userRole, setUserRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -29,9 +32,11 @@ export default function HomeScreen() {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
-      </View>
+      <ScreenWrapper>
+        <View style={[styles.loadingContainer, { backgroundColor: theme.background }]}>
+          <ActivityIndicator size="large" color={theme.primary} />
+        </View>
+      </ScreenWrapper>
     );
   }
 
@@ -42,26 +47,28 @@ export default function HomeScreen() {
 
   // Show welcome screen for retailers
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>🏠 Ana Sayfa</Text>
-        <Text style={styles.subtitle}>Hoş geldiniz, {user?.displayName || user?.email}</Text>
-      </View>
+    <ScreenWrapper>
+      <ScrollView style={[styles.container, { backgroundColor: theme.background }]}>
+        <View style={[styles.header, { backgroundColor: theme.backgroundCard, borderBottomColor: theme.border }]}>
+          <Text style={[styles.title, { color: theme.textPrimary }]}>🏠 Ana Sayfa</Text>
+          <Text style={[styles.subtitle, { color: theme.textSecondary }]}>Hoş geldiniz, {user?.displayName || user?.email}</Text>
+        </View>
 
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>📊 Hızlı Erişim</Text>
-        <Text style={styles.cardText}>• Marketplace'den taş görebilirsiniz</Text>
-        <Text style={styles.cardText}>• Mesajlarınızı kontrol edin</Text>
-        <Text style={styles.cardText}>• Profilinizi düzenleyin</Text>
-      </View>
+        <View style={[styles.card, { backgroundColor: theme.backgroundCard }]}>
+          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>📊 Hızlı Erişim</Text>
+          <Text style={[styles.cardText, { color: theme.textSecondary }]}>• Marketplace'den taş görebilirsiniz</Text>
+          <Text style={[styles.cardText, { color: theme.textSecondary }]}>• Mesajlarınızı kontrol edin</Text>
+          <Text style={[styles.cardText, { color: theme.textSecondary }]}>• Profilinizi düzenleyin</Text>
+        </View>
 
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>ℹ️ Test Modu</Text>
-        <Text style={styles.cardText}>
-          Bu mobil uygulama test amaçlıdır. Veriler web sitesi ile senkronize çalışır.
-        </Text>
-      </View>
-    </ScrollView>
+        <View style={[styles.card, { backgroundColor: theme.backgroundCard }]}>
+          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>ℹ️ Test Modu</Text>
+          <Text style={[styles.cardText, { color: theme.textSecondary }]}>
+            Bu mobil uygulama test amaçlıdır. Veriler web sitesi ile senkronize çalışır.
+          </Text>
+        </View>
+      </ScrollView>
+    </ScreenWrapper>
   );
 }
 
