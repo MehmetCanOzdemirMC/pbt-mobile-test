@@ -9,11 +9,15 @@ import {
   Dimensions,
   ActivityIndicator,
   Alert,
+  Modal,
+  Linking,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useCartStore } from '../stores/cartStore';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
+import ImageViewing from 'react-native-image-viewing';
+import { WebView } from 'react-native-webview';
 
 const { width } = Dimensions.get('window');
 
@@ -30,6 +34,7 @@ interface Stone {
   fluorescence?: string;
   certification: string;
   certificateNumber?: string;
+  certificateUrl?: string;
   pricePerCarat: number;
   totalPrice: number;
   availability: string;
@@ -50,6 +55,8 @@ export default function DiamondDetailScreen() {
   const [stone, setStone] = useState<Stone | null>(null);
   const [loading, setLoading] = useState(true);
   const [imageIndex, setImageIndex] = useState(0);
+  const [imageViewerVisible, setImageViewerVisible] = useState(false);
+  const [pdfViewerVisible, setPdfViewerVisible] = useState(false);
 
   const { addToCart, isInCart } = useCartStore();
   const inCart = stone ? isInCart(stone.id) : false;
@@ -121,7 +128,11 @@ export default function DiamondDetailScreen() {
     <View style={styles.container}>
       <ScrollView style={styles.scrollView}>
         {/* Image Gallery */}
-        <View style={styles.imageContainer}>
+        <TouchableOpacity
+          style={styles.imageContainer}
+          onPress={() => stone.images && stone.images.length > 0 && setImageViewerVisible(true)}
+          activeOpacity={0.9}
+        >
           {stone.images && stone.images.length > 0 ? (
             <>
               <Image
@@ -129,6 +140,9 @@ export default function DiamondDetailScreen() {
                 style={styles.image}
                 resizeMode="contain"
               />
+              <View style={styles.zoomHint}>
+                <Text style={styles.zoomHintText}>🔍 Yakınlaştırmak için tıkla</Text>
+              </View>
               {stone.images.length > 1 && (
                 <View style={styles.imageDots}>
                   {stone.images.map((_, index) => (
@@ -138,7 +152,10 @@ export default function DiamondDetailScreen() {
                         styles.dot,
                         imageIndex === index && styles.dotActive,
                       ]}
-                      onPress={() => setImageIndex(index)}
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        setImageIndex(index);
+                      }}
                     />
                   ))}
                 </View>
@@ -150,7 +167,7 @@ export default function DiamondDetailScreen() {
               <Text style={styles.placeholderSubtext}>Görsel Yok</Text>
             </View>
           )}
-        </View>
+        </TouchableOpacity>
 
         {/* Stone ID & Status */}
         <View style={styles.header}>
@@ -223,6 +240,20 @@ export default function DiamondDetailScreen() {
             {stone.certificateNumber && (
               <Text style={styles.certNumber}>{stone.certificateNumber}</Text>
             )}
+            {stone.certificateUrl && (
+              <TouchableOpacity
+                style={styles.viewCertButton}
+                onPress={() => {
+                  if (stone.certificateUrl?.startsWith('http')) {
+                    setPdfViewerVisible(true);
+                  } else {
+                    Alert.alert('Bilgi', 'Sertifika URL\'i geçersiz');
+                  }
+                }}
+              >
+                <Text style={styles.viewCertButtonText}>📄 Sertifikayı Görüntüle</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
 
@@ -273,6 +304,61 @@ export default function DiamondDetailScreen() {
           </Text>
         </TouchableOpacity>
       </View>
+
+      {/* Full Screen Image Viewer */}
+      {stone.images && stone.images.length > 0 && (
+        <ImageViewing
+          images={stone.images.map((uri) => ({ uri }))}
+          imageIndex={imageIndex}
+          visible={imageViewerVisible}
+          onRequestClose={() => setImageViewerVisible(false)}
+          onImageIndexChange={setImageIndex}
+        />
+      )}
+
+      {/* PDF Certificate Viewer */}
+      {stone.certificateUrl && (
+        <Modal
+          visible={pdfViewerVisible}
+          animationType="slide"
+          onRequestClose={() => setPdfViewerVisible(false)}
+        >
+          <View style={styles.pdfModalContainer}>
+            <View style={styles.pdfModalHeader}>
+              <Text style={styles.pdfModalTitle}>Sertifika</Text>
+              <TouchableOpacity
+                style={styles.pdfCloseButton}
+                onPress={() => setPdfViewerVisible(false)}
+              >
+                <Text style={styles.pdfCloseButtonText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <WebView
+              source={{ uri: stone.certificateUrl }}
+              style={styles.pdfWebView}
+              startInLoadingState={true}
+              renderLoading={() => (
+                <View style={styles.pdfLoadingContainer}>
+                  <ActivityIndicator size="large" color="#007AFF" />
+                  <Text style={styles.pdfLoadingText}>Sertifika yükleniyor...</Text>
+                </View>
+              )}
+            />
+            <TouchableOpacity
+              style={styles.pdfOpenBrowserButton}
+              onPress={() => {
+                if (stone.certificateUrl) {
+                  Linking.openURL(stone.certificateUrl);
+                }
+              }}
+            >
+              <Text style={styles.pdfOpenBrowserButtonText}>
+                🌐 Tarayıcıda Aç
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </Modal>
+      )}
     </View>
   );
 }
@@ -315,6 +401,20 @@ const styles = StyleSheet.create({
   image: {
     width: '100%',
     height: '100%',
+  },
+  zoomHint: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  zoomHintText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '500',
   },
   placeholderImage: {
     width: '100%',
@@ -428,6 +528,19 @@ const styles = StyleSheet.create({
   certNumber: {
     fontSize: 14,
     color: '#666',
+    marginBottom: 12,
+  },
+  viewCertButton: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  viewCertButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
   },
   measurements: {
     fontSize: 14,
@@ -481,6 +594,66 @@ const styles = StyleSheet.create({
   },
   addButtonText: {
     color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  pdfModalContainer: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  pdfModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+    backgroundColor: '#fff',
+  },
+  pdfModalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+  },
+  pdfCloseButton: {
+    width: 32,
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 16,
+    backgroundColor: '#f0f0f0',
+  },
+  pdfCloseButtonText: {
+    fontSize: 20,
+    color: '#666',
+  },
+  pdfWebView: {
+    flex: 1,
+  },
+  pdfLoadingContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+  pdfLoadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#666',
+  },
+  pdfOpenBrowserButton: {
+    backgroundColor: '#007AFF',
+    margin: 16,
+    padding: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  pdfOpenBrowserButtonText: {
+    color: 'white',
     fontSize: 16,
     fontWeight: '600',
   },

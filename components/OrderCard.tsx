@@ -159,7 +159,7 @@ export default function OrderCard({ order, onOrderUpdate }: OrderCardProps) {
       {
         text: 'İptal Et',
         style: 'destructive',
-        onPress: async (reason) => {
+        onPress: async (reason?: string) => {
           setActionLoading(true);
           try {
             await updateDoc(doc(db, 'orders', order.id), {
@@ -330,9 +330,9 @@ export default function OrderCard({ order, onOrderUpdate }: OrderCardProps) {
                 </>
               )}
               {isBuyer && (
-                <TouchableOpacity style={[styles.button, styles.acceptButton]} onPress={handleAcceptDeal}>
-                  <Text style={styles.buttonText}>✓ Anlaşmayı Kabul Et</Text>
-                </TouchableOpacity>
+                <View style={styles.waitingBox}>
+                  <Text style={styles.waitingText}>⏳ Tedarikçi anlaşmayı onaylıyor...</Text>
+                </View>
               )}
             </>
           )}

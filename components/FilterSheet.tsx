@@ -7,6 +7,7 @@ import {
   ScrollView,
   TextInput,
   Modal,
+  Platform,
 } from 'react-native';
 
 export interface Filters {
@@ -15,7 +16,7 @@ export interface Filters {
   caratMax: string;
   color: string[];
   clarity: string[];
-  sortBy: 'price_asc' | 'price_desc' | 'carat_asc' | 'carat_desc' | 'date_desc';
+  sortBy: 'price_asc' | 'price_desc' | 'carat_asc' | 'carat_desc' | 'date_desc' | 'date_asc';
 }
 
 interface FilterSheetProps {
@@ -33,6 +34,7 @@ const COLORS = ['D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M'];
 const CLARITIES = ['FL', 'IF', 'VVS1', 'VVS2', 'VS1', 'VS2', 'SI1', 'SI2', 'I1', 'I2'];
 const SORT_OPTIONS = [
   { value: 'date_desc' as const, label: 'En Yeni' },
+  { value: 'date_asc' as const, label: 'En Eski' },
   { value: 'price_asc' as const, label: 'Fiyat: Düşük → Yüksek' },
   { value: 'price_desc' as const, label: 'Fiyat: Yüksek → Düşük' },
   { value: 'carat_asc' as const, label: 'Karat: Küçük → Büyük' },
@@ -83,6 +85,7 @@ const FilterSheet = forwardRef<FilterSheetRef, FilterSheetProps>(
       <Modal
         visible={visible}
         animationType="slide"
+        presentationStyle="fullScreen"
         onRequestClose={() => setVisible(false)}
       >
         <View style={styles.container}>
@@ -98,7 +101,11 @@ const FilterSheet = forwardRef<FilterSheetRef, FilterSheetProps>(
             </View>
           </View>
 
-          <ScrollView style={styles.content}>
+          <ScrollView
+            style={styles.content}
+            contentContainerStyle={styles.contentContainer}
+            showsVerticalScrollIndicator={false}
+          >
             {/* Sort */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Sıralama</Text>
@@ -216,13 +223,13 @@ const FilterSheet = forwardRef<FilterSheetRef, FilterSheetProps>(
                 ))}
               </View>
             </View>
-
-            <View style={styles.footer}>
-              <TouchableOpacity style={styles.applyButton} onPress={handleApply}>
-                <Text style={styles.applyButtonText}>Filtrele</Text>
-              </TouchableOpacity>
-            </View>
           </ScrollView>
+
+          <View style={styles.footer}>
+            <TouchableOpacity style={styles.applyButton} onPress={handleApply}>
+              <Text style={styles.applyButtonText}>Filtrele</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </Modal>
     );
@@ -233,12 +240,15 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: 'white',
+    paddingTop: Platform.OS === 'ios' ? 60 : 40, // Space for status bar
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
   },
@@ -275,7 +285,10 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  contentContainer: {
     padding: 16,
+    paddingBottom: 32,
   },
   section: {
     marginBottom: 24,
@@ -355,8 +368,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   footer: {
-    marginTop: 16,
-    marginBottom: 32,
+    padding: 16,
+    paddingBottom: 24,
+    backgroundColor: 'white',
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
   },
   applyButton: {
     backgroundColor: '#007AFF',

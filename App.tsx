@@ -6,7 +6,10 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { signInWithEmailAndPassword, onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { auth, db } from './config/firebase';
+import { useNotifications } from './hooks/useNotifications';
+import OnboardingScreen from './screens/OnboardingScreen';
 
 // Screens
 import HomeScreen from './screens/HomeScreen';
@@ -15,16 +18,124 @@ import CartScreen from './screens/CartScreen';
 import MessagesScreen from './screens/MessagesScreen';
 import ConversationScreen from './screens/ConversationScreen';
 import ProfileScreen from './screens/ProfileScreen';
+import ProfileEditScreen from './screens/ProfileEditScreen';
+import FavoritesScreen from './screens/FavoritesScreen';
+import SettingsScreen from './screens/SettingsScreen';
+import CompareScreen from './screens/CompareScreen';
 import DiamondDetailScreen from './screens/DiamondDetailScreen';
 import CheckoutScreen from './screens/CheckoutScreen';
-import OrderDetailScreen from './screens/OrderDetailScreen';
+import OrderDetailScreen from './screens/supplier/OrderDetailScreen';
 import OrdersScreen from './screens/OrdersScreen';
+import SupplierDashboardScreen from './screens/SupplierDashboardScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
+// App wrapper with notifications
+function AppWithNotifications() {
+  useNotifications(); // Register for push notifications
+
+  return (
+    <Stack.Navigator>
+      <Stack.Screen
+        name="MainTabs"
+        component={MainTabs}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="Conversation"
+        component={ConversationScreen}
+        options={{
+          title: 'Sohbet',
+          headerBackTitle: 'Geri'
+        }}
+      />
+      <Stack.Screen
+        name="DiamondDetail"
+        component={DiamondDetailScreen}
+        options={{
+          title: 'Taş Detayı',
+          headerBackTitle: 'Geri'
+        }}
+      />
+      <Stack.Screen
+        name="Checkout"
+        component={CheckoutScreen}
+        options={{
+          title: 'Sipariş Oluştur',
+          headerBackTitle: 'Geri'
+        }}
+      />
+      <Stack.Screen
+        name="OrderDetail"
+        component={OrderDetailScreen}
+        options={{
+          title: 'Sipariş Detayı',
+          headerBackTitle: 'Geri'
+        }}
+      />
+      <Stack.Screen
+        name="ProfileEdit"
+        component={ProfileEditScreen}
+        options={{
+          title: 'Profil Düzenle',
+          headerBackTitle: 'Geri'
+        }}
+      />
+      <Stack.Screen
+        name="Favorites"
+        component={FavoritesScreen}
+        options={{
+          title: 'Favorilerim',
+          headerBackTitle: 'Geri'
+        }}
+      />
+      <Stack.Screen
+        name="Settings"
+        component={SettingsScreen}
+        options={{
+          title: 'Ayarlar',
+          headerBackTitle: 'Geri'
+        }}
+      />
+      <Stack.Screen
+        name="Compare"
+        component={CompareScreen}
+        options={{
+          title: 'Karşılaştır',
+          headerBackTitle: 'Geri'
+        }}
+      />
+    </Stack.Navigator>
+  );
+}
+
 // Tab Navigator Component
 function MainTabs() {
+  const [userData, setUserData] = useState<any>(null);
+
+  // Fetch user data to determine role
+  useEffect(() => {
+    if (!auth.currentUser) return;
+
+    const fetchUserData = async () => {
+      try {
+        const userDoc = await getDoc(doc(db, 'users', auth.currentUser!.uid));
+        if (userDoc.exists()) {
+          setUserData(userDoc.data());
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+      }
+    };
+
+    fetchUserData();
+  }, []);
+
+  const isSupplier = userData?.role === 'supplierLocal' ||
+                     userData?.role === 'supplierDropship' ||
+                     userData?.role === 'supplierInternational';
+
   return (
     <Tab.Navigator
       screenOptions={{
@@ -50,33 +161,48 @@ function MainTabs() {
         },
       }}
     >
-      <Tab.Screen
-        name="Home"
-        component={HomeScreen}
-        options={{
-          title: 'Ana Sayfa',
-          tabBarLabel: 'Ana Sayfa',
-          tabBarIcon: () => <Text style={{ fontSize: 24 }}>🏠</Text>,
-        }}
-      />
-      <Tab.Screen
-        name="Marketplace"
-        component={MarketplaceScreen}
-        options={{
-          title: 'Marketplace',
-          tabBarLabel: 'Taşlar',
-          tabBarIcon: () => <Text style={{ fontSize: 24 }}>💎</Text>,
-        }}
-      />
-      <Tab.Screen
-        name="Cart"
-        component={CartScreen}
-        options={{
-          title: 'Sepet',
-          tabBarLabel: 'Sepet',
-          tabBarIcon: () => <Text style={{ fontSize: 24 }}>🛒</Text>,
-        }}
-      />
+      {!isSupplier && (
+        <>
+          <Tab.Screen
+            name="Home"
+            component={HomeScreen}
+            options={{
+              title: 'Ana Sayfa',
+              tabBarLabel: 'Ana Sayfa',
+              tabBarIcon: () => <Text style={{ fontSize: 24 }}>🏠</Text>,
+            }}
+          />
+          <Tab.Screen
+            name="Marketplace"
+            component={MarketplaceScreen}
+            options={{
+              title: 'Marketplace',
+              tabBarLabel: 'Taşlar',
+              tabBarIcon: () => <Text style={{ fontSize: 24 }}>💎</Text>,
+            }}
+          />
+          <Tab.Screen
+            name="Cart"
+            component={CartScreen}
+            options={{
+              title: 'Sepet',
+              tabBarLabel: 'Sepet',
+              tabBarIcon: () => <Text style={{ fontSize: 24 }}>🛒</Text>,
+            }}
+          />
+        </>
+      )}
+      {isSupplier && (
+        <Tab.Screen
+          name="SupplierDashboard"
+          component={SupplierDashboardScreen}
+          options={{
+            title: 'Stok & Satışlar',
+            tabBarLabel: 'Dashboard',
+            tabBarIcon: () => <Text style={{ fontSize: 24 }}>📊</Text>,
+          }}
+        />
+      )}
       <Tab.Screen
         name="Messages"
         component={MessagesScreen}
@@ -114,6 +240,24 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [userData, setUserData] = useState<any>(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [checkingOnboarding, setCheckingOnboarding] = useState(true);
+
+  // Check onboarding status
+  useEffect(() => {
+    const checkOnboarding = async () => {
+      try {
+        const hasSeenOnboarding = await AsyncStorage.getItem('hasSeenOnboarding');
+        setShowOnboarding(!hasSeenOnboarding);
+      } catch (error) {
+        console.error('Error checking onboarding:', error);
+      } finally {
+        setCheckingOnboarding(false);
+      }
+    };
+
+    checkOnboarding();
+  }, []);
 
   // Auth state listener
   useEffect(() => {
@@ -165,11 +309,21 @@ export default function App() {
     }
   };
 
-  if (loading) {
+  if (loading || checkingOnboarding) {
     return (
       <View style={styles.container}>
         <ActivityIndicator size="large" color="#007AFF" />
       </View>
+    );
+  }
+
+  // Show onboarding if needed
+  if (showOnboarding && user) {
+    return (
+      <>
+        <StatusBar style="light" />
+        <OnboardingScreen onComplete={() => setShowOnboarding(false)} />
+      </>
     );
   }
 
@@ -178,45 +332,7 @@ export default function App() {
     return (
       <NavigationContainer>
         <StatusBar style="auto" />
-        <Stack.Navigator>
-          <Stack.Screen
-            name="MainTabs"
-            component={MainTabs}
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen
-            name="Conversation"
-            component={ConversationScreen}
-            options={{
-              title: 'Sohbet',
-              headerBackTitle: 'Geri'
-            }}
-          />
-          <Stack.Screen
-            name="DiamondDetail"
-            component={DiamondDetailScreen}
-            options={{
-              title: 'Taş Detayı',
-              headerBackTitle: 'Geri'
-            }}
-          />
-          <Stack.Screen
-            name="Checkout"
-            component={CheckoutScreen}
-            options={{
-              title: 'Sipariş Oluştur',
-              headerBackTitle: 'Geri'
-            }}
-          />
-          <Stack.Screen
-            name="OrderDetail"
-            component={OrderDetailScreen}
-            options={{
-              title: 'Sipariş Detayı',
-              headerBackTitle: 'Geri'
-            }}
-          />
-        </Stack.Navigator>
+        <AppWithNotifications />
       </NavigationContainer>
     );
   }

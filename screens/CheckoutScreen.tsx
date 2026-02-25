@@ -58,6 +58,17 @@ export default function CheckoutScreen() {
       const user = auth.currentUser;
       if (!user) throw new Error('User not authenticated');
 
+      // Fetch buyer's company name from profile
+      let buyerCompany = '';
+      try {
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        if (userDoc.exists()) {
+          buyerCompany = userDoc.data().companyName || '';
+        }
+      } catch (error) {
+        console.error('Error fetching user profile:', error);
+      }
+
       // Group items by supplier
       const supplierGroups: { [supplierId: string]: any[] } = {};
       cart.forEach(item => {
@@ -97,11 +108,12 @@ export default function CheckoutScreen() {
           orderId: `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           buyerId: user.uid,
           buyerEmail: user.email,
+          buyerCompany: buyerCompany, // Company name from user profile
           supplierId: supplierId,
           supplierName: items[0].supplierName || 'Unknown Supplier',
           items: items.map(item => ({
-            stoneId: item.stoneId,
-            id: item.id,
+            stoneId: item.id, // Use Firestore document ID, not numeric stoneId
+            id: item.stoneId, // Store numeric ID as "id" field
             carat: item.carat,
             shape: item.shape,
             color: item.color,
@@ -157,23 +169,25 @@ export default function CheckoutScreen() {
       for (const { orderId, items } of results) {
         for (const item of items) {
           try {
-            const stoneRef = doc(db, 'stones', item.id);
+            // item.stoneId now contains Firestore document ID (after our fix)
+            // item.id now contains numeric ID
+            const stoneRef = doc(db, 'stones', item.stoneId);
 
             // First, check current stone status
             const stoneDoc = await getDoc(stoneRef);
             if (!stoneDoc.exists()) {
-              console.error('Stone not found:', item.id);
-              unavailableStones.push(item.stoneId);
+              console.error('Stone not found:', item.stoneId);
+              unavailableStones.push(item.id); // Show numeric ID to user
               continue; // Skip this stone
             }
 
             const currentStatus = stoneDoc.data()?.status || 'unknown';
-            console.log('Stone current status before reserve:', item.id, currentStatus);
+            console.log('Stone current status before reserve:', item.stoneId, currentStatus);
 
             // Check if stone is available
             if (currentStatus !== 'available') {
-              console.warn('Stone not available:', item.id, 'Status:', currentStatus);
-              unavailableStones.push(item.stoneId);
+              console.warn('Stone not available:', item.stoneId, 'Status:', currentStatus);
+              unavailableStones.push(item.id); // Show numeric ID to user
               continue; // Skip this stone, don't try to reserve it
             }
 
@@ -184,11 +198,11 @@ export default function CheckoutScreen() {
               reservedAt: serverTimestamp(),
               orderId: orderId,
             });
-            console.log('✅ Stone reserved successfully:', item.id);
+            console.log('✅ Stone reserved successfully:', item.stoneId);
 
           } catch (error: any) {
-            console.error('❌ Error reserving stone:', item.id, error.message);
-            unavailableStones.push(item.stoneId);
+            console.error('❌ Error reserving stone:', item.stoneId, error.message);
+            unavailableStones.push(item.id); // Show numeric ID to user
             // Continue with other stones instead of stopping
           }
         }
@@ -205,22 +219,23 @@ export default function CheckoutScreen() {
       // STEP 3: Clear cart fields (only for successfully reserved stones)
       for (const { items } of results) {
         for (const item of items) {
-          // Skip if this stone was unavailable
-          if (unavailableStones.includes(item.stoneId)) {
+          // Skip if this stone was unavailable (item.id is numeric ID)
+          if (unavailableStones.includes(item.id)) {
             console.log('Skipping cart clear for unavailable stone:', item.id);
             continue;
           }
 
           try {
-            const stoneRef = doc(db, 'stones', item.id);
+            // item.stoneId is now Firestore document ID
+            const stoneRef = doc(db, 'stones', item.stoneId);
             await updateDoc(stoneRef, {
               inCarts: [],
               cartCount: 0,
               cartDetails: {},
             });
-            console.log('✅ Cart fields cleared:', item.id);
+            console.log('✅ Cart fields cleared:', item.stoneId);
           } catch (error) {
-            console.error('❌ Error clearing cart fields:', item.id, error);
+            console.error('❌ Error clearing cart fields:', item.stoneId, error);
           }
         }
       }

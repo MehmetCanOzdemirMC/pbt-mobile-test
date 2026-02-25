@@ -46,6 +46,21 @@ export const useCartStore = create<CartState>((set, get) => ({
     if (!user) return;
 
     try {
+      // Check stone availability from Firestore before adding
+      const stoneDocRef = doc(db, 'stones', stone.id);
+      const stoneDoc = await getDoc(stoneDocRef);
+
+      if (!stoneDoc.exists()) {
+        throw new Error('Bu taş bulunamadı');
+      }
+
+      const stoneData = stoneDoc.data();
+      const availability = stoneData.availability || stoneData.status || 'available';
+
+      if (availability !== 'available') {
+        throw new Error('Bu taş artık müsait değil');
+      }
+
       // Remove undefined values for Firestore
       const cleanItem: any = {
         id: stone.id,

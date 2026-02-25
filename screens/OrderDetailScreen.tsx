@@ -15,6 +15,7 @@ import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../config/firebase';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import { useMessagingStore } from '../stores/messagingStore';
 
 interface OrderItem {
   stoneId: string;
@@ -38,6 +39,7 @@ interface Order {
   buyerEmail: string;
   supplierId: string;
   supplierName: string;
+  conversationId?: string; // For sending messages
   items: OrderItem[];
   originalTotal: number;
   finalTotal: number;
@@ -75,6 +77,7 @@ export default function OrderDetailScreen() {
   });
 
   const currentUserId = auth.currentUser?.uid;
+  const { sendMessageById } = useMessagingStore();
 
   useEffect(() => {
     loadOrder();
@@ -87,7 +90,19 @@ export default function OrderDetailScreen() {
       const orderSnap = await getDoc(orderRef);
 
       if (orderSnap.exists()) {
-        setOrder({ id: orderSnap.id, ...orderSnap.data() } as Order);
+        const orderData = { id: orderSnap.id, ...orderSnap.data() } as Order;
+        setOrder(orderData);
+
+        // 🐛 DEBUG: Log payment info status
+        console.log('📦 [OrderDetail] Order loaded:', {
+          orderId: orderData.orderId,
+          status: orderData.status,
+          hasPaymentInfo: !!orderData.paymentInfo,
+          paymentInfo: orderData.paymentInfo,
+          buyerId: orderData.buyerId,
+          supplierId: orderData.supplierId,
+          currentUserId,
+        });
       } else {
         Alert.alert('Hata', 'Sipariş bulunamadı');
         navigation.goBack();
@@ -103,34 +118,25 @@ export default function OrderDetailScreen() {
   const handleAcceptDeal = async () => {
     if (!order) return;
 
+    // Only supplier can accept deal and provide payment info
     const isSupplier = currentUserId === order.supplierId;
+    if (!isSupplier) return;
 
-    // Supplier needs to provide payment info
-    if (isSupplier) {
-      // Load user's saved bank info from profile
-      try {
-        const userDoc = await getDoc(doc(db, 'users', currentUserId!));
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          // Bank info is stored under paymentInfo object
-          const paymentInfoData = userData.paymentInfo || {};
-          setPaymentInfo({
-            bankName: paymentInfoData.bankName || '',
-            iban: paymentInfoData.iban || '',
-            accountHolder: paymentInfoData.accountHolder || '',
-            amount: order.finalTotal.toString(),
-          });
-        } else {
-          // No saved data, use empty
-          setPaymentInfo({
-            bankName: '',
-            iban: '',
-            accountHolder: '',
-            amount: order.finalTotal.toString(),
-          });
-        }
-      } catch (error) {
-        console.error('Error loading user bank info:', error);
+    // Load user's saved bank info from profile
+    try {
+      const userDoc = await getDoc(doc(db, 'users', currentUserId!));
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        // Bank info is stored under paymentInfo object
+        const paymentInfoData = userData.paymentInfo || {};
+        setPaymentInfo({
+          bankName: paymentInfoData.bankName || '',
+          iban: paymentInfoData.iban || '',
+          accountHolder: paymentInfoData.accountHolder || '',
+          amount: order.finalTotal.toString(),
+        });
+      } else {
+        // No saved data, use empty
         setPaymentInfo({
           bankName: '',
           iban: '',
@@ -138,38 +144,16 @@ export default function OrderDetailScreen() {
           amount: order.finalTotal.toString(),
         });
       }
-      setShowPaymentModal(true);
-    } else {
-      // Buyer just accepts the deal
-      Alert.alert(
-        'Anlaşmayı Onayla',
-        'Fiyatı onaylıyor musunuz?',
-        [
-          { text: 'İptal', style: 'cancel' },
-          {
-            text: 'Onayla',
-            onPress: async () => {
-              setActionLoading(true);
-              try {
-                const orderRef = doc(db, 'orders', order.id);
-                await updateDoc(orderRef, {
-                  status: 'PENDING_PAYMENT',
-                  updatedAt: serverTimestamp(),
-                });
-
-                Alert.alert('Başarılı', 'Fiyat onaylandı. Ödeme aşamasına geçildi.');
-                await loadOrder();
-              } catch (error) {
-                console.error('Error accepting deal:', error);
-                Alert.alert('Hata', 'İşlem gerçekleştirilemedi');
-              } finally {
-                setActionLoading(false);
-              }
-            },
-          },
-        ]
-      );
+    } catch (error) {
+      console.error('Error loading user bank info:', error);
+      setPaymentInfo({
+        bankName: '',
+        iban: '',
+        accountHolder: '',
+        amount: order.finalTotal.toString(),
+      });
     }
+    setShowPaymentModal(true);
   };
 
   const handleSavePaymentInfo = async () => {
@@ -206,6 +190,14 @@ export default function OrderDetailScreen() {
         },
         updatedAt: serverTimestamp(),
       });
+
+      // Send payment info message (matching web behavior)
+      if (order.conversationId) {
+        await sendMessageById(order.conversationId, {
+          type: 'text',
+          body: `✅ Anlaşma tamam! Ödeme bilgileri aşağıdadır:\n\n💰 ÖDEME BİLGİLERİ\n━━━━━━━━━━━━━━━━━━\n🏦 Banka: ${paymentInfo.bankName.trim()}\n💳 IBAN: ${paymentInfo.iban.trim()}\n👤 Hesap Sahibi: ${paymentInfo.accountHolder.trim()}\n💵 Tutar: $${order.finalTotal.toLocaleString()}\n\n⚠️ Ödeme yaptıktan sonra "Ödemeyi Yaptım" butonuna basınız.`
+        });
+      }
 
       setShowPaymentModal(false);
       Alert.alert('Başarılı', 'Ödeme bilgileri kaydedildi. Alıcı ödeme yapabilir.');
@@ -285,6 +277,14 @@ export default function OrderDetailScreen() {
                 status: 'PAYMENT_CLAIMED',
                 updatedAt: serverTimestamp(),
               });
+
+              // Send notification message (matching web behavior)
+              if (order.conversationId) {
+                await sendMessageById(order.conversationId, {
+                  type: 'text',
+                  body: '💳 Alıcı ödemeyi yaptığını bildirdi. Lütfen bankayı kontrol edin ve onaylayın.'
+                });
+              }
 
               Alert.alert('Başarılı', 'Ödeme bildirimi yapıldı. Tedarikçi onayı bekleniyor.');
               await loadOrder();
@@ -780,12 +780,9 @@ export default function OrderDetailScreen() {
                 </>
               )}
               {isBuyer && (
-                <TouchableOpacity
-                  style={[styles.actionButton, styles.acceptButton, { flex: 1 }]}
-                  onPress={handleAcceptDeal}
-                >
-                  <Text style={styles.actionButtonText}>✓ Anlaşmayı Kabul Et</Text>
-                </TouchableOpacity>
+                <View style={styles.waitingBox}>
+                  <Text style={styles.waitingText}>⏳ Tedarikçi anlaşmayı onaylıyor...</Text>
+                </View>
               )}
             </>
           )}

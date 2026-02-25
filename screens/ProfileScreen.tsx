@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { signOut } from 'firebase/auth';
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { useNavigation } from '@react-navigation/native';
 import { auth, db } from '../config/firebase';
 import { useCartStore } from '../stores/cartStore';
 
 export default function ProfileScreen() {
+  const navigation = useNavigation();
   const user = auth.currentUser;
   const [userData, setUserData] = useState<any>(null);
   const [stats, setStats] = useState({ orders: 0, conversations: 0 });
@@ -154,18 +156,27 @@ export default function ProfileScreen() {
 
       {/* Stats */}
       <View style={styles.statsContainer}>
-        <View style={styles.statBox}>
+        <TouchableOpacity
+          style={styles.statBox}
+          onPress={() => (navigation as any).navigate('Cart')}
+        >
           <Text style={styles.statValue}>{totalItems()}</Text>
           <Text style={styles.statLabel}>Sepet</Text>
-        </View>
-        <View style={styles.statBox}>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.statBox}
+          onPress={() => (navigation as any).navigate('Favorites')}
+        >
+          <Text style={styles.statValue}>❤️</Text>
+          <Text style={styles.statLabel}>Favoriler</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.statBox}
+          onPress={() => (navigation as any).navigate('Orders')}
+        >
           <Text style={styles.statValue}>{stats.orders}</Text>
           <Text style={styles.statLabel}>Sipariş</Text>
-        </View>
-        <View style={styles.statBox}>
-          <Text style={styles.statValue}>{stats.conversations}</Text>
-          <Text style={styles.statLabel}>Mesaj</Text>
-        </View>
+        </TouchableOpacity>
       </View>
 
       <View style={styles.section}>
@@ -195,6 +206,20 @@ export default function ProfileScreen() {
           <Text style={styles.value}>{userData.membershipStatus || 'pending'}</Text>
         </View>
       </View>
+
+      <TouchableOpacity
+        style={styles.editButton}
+        onPress={() => (navigation as any).navigate('ProfileEdit')}
+      >
+        <Text style={styles.editButtonText}>✏️ Profili Düzenle</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.settingsButton}
+        onPress={() => (navigation as any).navigate('Settings')}
+      >
+        <Text style={styles.settingsButtonText}>⚙️ Ayarlar (Dil & Para Birimi)</Text>
+      </TouchableOpacity>
 
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
         <Text style={styles.logoutButtonText}>🚪 Çıkış Yap</Text>
@@ -321,9 +346,36 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#333',
   },
+  editButton: {
+    backgroundColor: '#007AFF',
+    marginHorizontal: 16,
+    marginTop: 8,
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  editButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  settingsButton: {
+    backgroundColor: '#34C759',
+    marginHorizontal: 16,
+    marginTop: 8,
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  settingsButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
   logoutButton: {
     backgroundColor: '#FF3B30',
     margin: 16,
+    marginTop: 8,
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',

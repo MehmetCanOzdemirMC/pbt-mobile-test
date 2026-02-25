@@ -14,6 +14,8 @@ import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { collection, query, limit, getDocs, orderBy, where } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { useCartStore } from '../stores/cartStore';
+import { useFavoritesStore } from '../stores/favoritesStore';
+import { useCompareStore } from '../stores/compareStore';
 import StoneDetailModal from '../components/StoneDetailModal';
 import FilterSheet, { Filters, FilterSheetRef } from '../components/FilterSheet';
 
@@ -39,19 +41,21 @@ interface Stone {
   symmetry?: string;
   totalPrice: number;
   pricePerCarat: number;
-  status: string;
+  availability: string;
   supplierId: string;
   supplierName?: string;
 }
 
 export default function MarketplaceScreen() {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
-  const [stones, setStones] = useState<Stone[]>([]);
+  const [allStones, setAllStones] = useState<Stone[]>([]); // Tüm taşlar
+  const [stones, setStones] = useState<Stone[]>([]); // Gösterilen taşlar
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedStone, setSelectedStone] = useState<Stone | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
   const [filters, setFilters] = useState<Filters>({
     shape: [],
     caratMin: '',
@@ -61,13 +65,29 @@ export default function MarketplaceScreen() {
     sortBy: 'date_desc',
   });
 
+  const ITEMS_PER_PAGE = 20;
+
   const filterSheetRef = useRef<FilterSheetRef>(null);
   const { addToCart, totalItems, loadCart } = useCartStore();
+  const { addToFavorites, removeFromFavorites, isFavorite, loadFavorites } = useFavoritesStore();
+  const { compareList } = useCompareStore();
 
   useEffect(() => {
     loadStones();
     loadCart();
+    loadFavorites();
   }, [filters, searchQuery]);
+
+  useEffect(() => {
+    // Sayfa değiştiğinde gösterilen taşları güncelle
+    paginateStones();
+  }, [currentPage, allStones]);
+
+  const paginateStones = () => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    setStones(allStones.slice(startIndex, endIndex));
+  };
 
   const loadStones = async () => {
     try {
@@ -98,8 +118,8 @@ export default function MarketplaceScreen() {
       const sortDirection = filters.sortBy.includes('desc') ? 'desc' : 'asc';
       constraints.push(orderBy(sortField, sortDirection));
 
-      // Limit
-      constraints.push(limit(200));
+      // Limit - artık daha fazla taş getiriyoruz
+      constraints.push(limit(1000));
 
       const q = query(stonesRef, ...constraints);
       const snapshot = await getDocs(q);
@@ -119,11 +139,14 @@ export default function MarketplaceScreen() {
           symmetry: data.symmetry,
           totalPrice: data.totalPrice || data.price || 0,
           pricePerCarat: data.pricePerCarat || 0,
-          status: data.status || 'available',
+          availability: data.availability || data.availability || 'available',
           supplierId: data.supplierId || '',
           supplierName: data.supplierName,
         });
       });
+
+      // Filter out reserved stones
+      stonesData = stonesData.filter(s => s.availability !== 'reserved');
 
       // Client-side filters (for carat range and search)
       if (filters.caratMin) {
@@ -144,7 +167,8 @@ export default function MarketplaceScreen() {
         );
       }
 
-      setStones(stonesData);
+      setAllStones(stonesData);
+      setCurrentPage(1); // Reset to first page when data changes
     } catch (error) {
       console.error('Error loading stones:', error);
     } finally {
@@ -164,7 +188,7 @@ export default function MarketplaceScreen() {
   };
 
   const handleAddToCart = async (stone: Stone) => {
-    if (stone.status !== 'available') {
+    if (stone.availability !== 'available') {
       Alert.alert('Uyarı', 'Bu taş müsait değil');
       return;
     }
@@ -192,16 +216,50 @@ export default function MarketplaceScreen() {
     }
   };
 
+  const handleToggleFavorite = async (stone: Stone) => {
+    try {
+      if (isFavorite(stone.id)) {
+        await removeFromFavorites(stone.id);
+      } else {
+        await addToFavorites({
+          id: stone.id,
+          stoneId: stone.stoneId,
+          carat: stone.carat,
+          shape: stone.shape,
+          color: stone.color,
+          clarity: stone.clarity,
+          totalPrice: stone.totalPrice,
+          pricePerCarat: stone.pricePerCarat,
+          supplierId: stone.supplierId,
+          supplierName: stone.supplierName,
+          addedAt: Date.now(),
+        });
+      }
+    } catch (error) {
+      Alert.alert('Hata', 'Favori işlemi başarısız');
+    }
+  };
+
   const renderStoneCard = ({ item }: { item: Stone }) => (
     <TouchableOpacity style={styles.card} onPress={() => handleStonePress(item)}>
       <View style={styles.cardHeader}>
         <Text style={styles.stoneId}>💎 {item.stoneId}</Text>
-        <Text style={[
-          styles.statusBadge,
-          item.status === 'available' ? styles.statusAvailable : styles.statusReserved
-        ]}>
-          {item.status === 'available' ? '✓ Mevcut' : '⏳ Rezerve'}
-        </Text>
+        <View style={styles.cardHeaderRight}>
+          <TouchableOpacity
+            style={styles.favoriteButton}
+            onPress={() => handleToggleFavorite(item)}
+          >
+            <Text style={styles.favoriteIcon}>
+              {isFavorite(item.id) ? '❤️' : '🤍'}
+            </Text>
+          </TouchableOpacity>
+          <Text style={[
+            styles.availabilityBadge,
+            item.availability === 'available' ? styles.availabilityAvailable : styles.availabilityReserved
+          ]}>
+            {item.availability === 'available' ? '✓ Mevcut' : '⏳ Rezerve'}
+          </Text>
+        </View>
       </View>
 
       <View style={styles.cardBody}>
@@ -247,13 +305,13 @@ export default function MarketplaceScreen() {
       <TouchableOpacity
         style={[
           styles.addToCartButton,
-          item.status !== 'available' && styles.addToCartButtonDisabled
+          item.availability !== 'available' && styles.addToCartButtonDisabled
         ]}
         onPress={() => handleAddToCart(item)}
-        disabled={Boolean(item.status !== 'available')}
+        disabled={Boolean(item.availability !== 'available')}
       >
         <Text style={styles.addToCartButtonText}>
-          {item.status === 'available' ? '🛒 Sepete Ekle' : '⏳ Müsait Değil'}
+          {item.availability === 'available' ? '🛒 Sepete Ekle' : '⏳ Müsait Değil'}
         </Text>
       </TouchableOpacity>
     </TouchableOpacity>
@@ -286,9 +344,11 @@ export default function MarketplaceScreen() {
       </View>
 
       <View style={styles.statsBar}>
-        <Text style={styles.statsText}>📊 {stones.length} Taş</Text>
         <Text style={styles.statsText}>
-          ✓ {stones.filter(s => s.status === 'available').length} Mevcut
+          📊 Toplam {allStones.length} Taş ({stones.length} gösteriliyor)
+        </Text>
+        <Text style={styles.statsText}>
+          ✓ {allStones.filter(s => s.availability === 'available').length} Mevcut
         </Text>
       </View>
 
@@ -307,12 +367,82 @@ export default function MarketplaceScreen() {
         }
       />
 
+      {/* Pagination Controls */}
+      {allStones.length > ITEMS_PER_PAGE && (
+        <View style={styles.paginationContainer}>
+          <TouchableOpacity
+            style={[styles.pageButton, currentPage === 1 && styles.pageButtonDisabled]}
+            onPress={() => setCurrentPage(currentPage - 1)}
+            disabled={currentPage === 1}
+          >
+            <Text style={styles.pageButtonText}>←</Text>
+          </TouchableOpacity>
+
+          {Array.from({ length: Math.ceil(allStones.length / ITEMS_PER_PAGE) }, (_, i) => i + 1)
+            .filter(page => {
+              // Show first, last, current, and adjacent pages
+              const totalPages = Math.ceil(allStones.length / ITEMS_PER_PAGE);
+              return (
+                page === 1 ||
+                page === totalPages ||
+                Math.abs(page - currentPage) <= 1
+              );
+            })
+            .map((page, index, array) => {
+              const prevPage = array[index - 1];
+              const showEllipsis = prevPage && page - prevPage > 1;
+
+              return (
+                <React.Fragment key={page}>
+                  {showEllipsis && (
+                    <Text style={styles.ellipsis}>...</Text>
+                  )}
+                  <TouchableOpacity
+                    style={[
+                      styles.pageButton,
+                      currentPage === page && styles.pageButtonActive
+                    ]}
+                    onPress={() => setCurrentPage(page)}
+                  >
+                    <Text style={[
+                      styles.pageButtonText,
+                      currentPage === page && styles.pageButtonTextActive
+                    ]}>
+                      {page}
+                    </Text>
+                  </TouchableOpacity>
+                </React.Fragment>
+              );
+            })}
+
+          <TouchableOpacity
+            style={[
+              styles.pageButton,
+              currentPage === Math.ceil(allStones.length / ITEMS_PER_PAGE) && styles.pageButtonDisabled
+            ]}
+            onPress={() => setCurrentPage(currentPage + 1)}
+            disabled={currentPage === Math.ceil(allStones.length / ITEMS_PER_PAGE)}
+          >
+            <Text style={styles.pageButtonText}>→</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       {totalItems() > 0 && (
         <TouchableOpacity
           style={styles.floatingCartBadge}
           onPress={() => navigation.navigate('Cart')}
         >
           <Text style={styles.floatingCartText}>🛒 {totalItems()}</Text>
+        </TouchableOpacity>
+      )}
+
+      {compareList.length > 0 && (
+        <TouchableOpacity
+          style={styles.floatingCompareBadge}
+          onPress={() => (navigation as any).navigate('Compare')}
+        >
+          <Text style={styles.floatingCompareText}>⚖️ {compareList.length}</Text>
         </TouchableOpacity>
       )}
 
@@ -411,23 +541,34 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
   },
+  cardHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   stoneId: {
     fontSize: 16,
     fontWeight: 'bold',
     color: '#333',
   },
-  statusBadge: {
+  favoriteButton: {
+    padding: 4,
+  },
+  favoriteIcon: {
+    fontSize: 20,
+  },
+  availabilityBadge: {
     fontSize: 12,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
     overflow: 'hidden',
   },
-  statusAvailable: {
+  availabilityAvailable: {
     backgroundColor: '#e8f5e9',
     color: '#2e7d32',
   },
-  statusReserved: {
+  availabilityReserved: {
     backgroundColor: '#fff3e0',
     color: '#f57c00',
   },
@@ -526,5 +667,64 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  floatingCompareBadge: {
+    position: 'absolute',
+    bottom: 80,
+    right: 20,
+    backgroundColor: '#34C759',
+    borderRadius: 30,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 8,
+  },
+  floatingCompareText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  paginationContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 8,
+    backgroundColor: 'white',
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+    gap: 8,
+  },
+  pageButton: {
+    minWidth: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 8,
+    backgroundColor: '#f5f5f5',
+    paddingHorizontal: 12,
+  },
+  pageButtonActive: {
+    backgroundColor: '#007AFF',
+  },
+  pageButtonDisabled: {
+    backgroundColor: '#f5f5f5',
+    opacity: 0.5,
+  },
+  pageButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+  },
+  pageButtonTextActive: {
+    color: 'white',
+  },
+  ellipsis: {
+    fontSize: 16,
+    color: '#999',
+    paddingHorizontal: 4,
   },
 });
