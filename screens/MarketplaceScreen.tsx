@@ -20,6 +20,7 @@ import StoneDetailModal from '../components/StoneDetailModal';
 import FilterSheet, { Filters, FilterSheetRef } from '../components/FilterSheet';
 import ScreenWrapper from '../components/ScreenWrapper';
 import { useTheme } from '../context/ThemeContext';
+import { parseSearchWithGemini, applyGeminiFilters } from '../utils/geminiSearch';
 
 type RootStackParamList = {
   Home: undefined;
@@ -89,38 +90,61 @@ export default function MarketplaceScreen() {
     loadFavorites();
   }, []);
 
-  // Apply filters when they change
+  // Apply filters when they change (with Gemini AI support)
   useEffect(() => {
-    console.log('🔍 MarketplaceScreen: Applying filters...', filters);
+    const applyFiltersAsync = async () => {
+      console.log('🔍 MarketplaceScreen: Applying filters...', filters);
 
-    // Convert Filters to MarketplaceFilters format
-    const marketplaceFilters: any = {};
+      // Convert Filters to MarketplaceFilters format
+      const marketplaceFilters: any = {};
 
-    if (filters.shape.length > 0) {
-      marketplaceFilters.shape = filters.shape;
-    }
+      if (filters.shape.length > 0) {
+        marketplaceFilters.shape = filters.shape;
+      }
 
-    if (filters.color.length > 0) {
-      marketplaceFilters.color = filters.color;
-    }
+      if (filters.color.length > 0) {
+        marketplaceFilters.color = filters.color;
+      }
 
-    if (filters.clarity.length > 0) {
-      marketplaceFilters.clarity = filters.clarity;
-    }
+      if (filters.clarity.length > 0) {
+        marketplaceFilters.clarity = filters.clarity;
+      }
 
-    if (filters.caratMin) {
-      marketplaceFilters.caratMin = parseFloat(filters.caratMin);
-    }
+      if (filters.caratMin) {
+        marketplaceFilters.caratMin = parseFloat(filters.caratMin);
+      }
 
-    if (filters.caratMax) {
-      marketplaceFilters.caratMax = parseFloat(filters.caratMax);
-    }
+      if (filters.caratMax) {
+        marketplaceFilters.caratMax = parseFloat(filters.caratMax);
+      }
 
-    if (searchQuery.trim()) {
-      marketplaceFilters.searchQuery = searchQuery;
-    }
+      // Try Gemini AI parsing for natural language search
+      if (searchQuery.trim()) {
+        try {
+          const geminiFilters = await parseSearchWithGemini(searchQuery);
+          if (geminiFilters) {
+            console.log('🤖 Using Gemini AI filters:', geminiFilters);
+            // Merge Gemini filters with marketplace filters
+            if (geminiFilters.carat) marketplaceFilters.carat = geminiFilters.carat;
+            if (geminiFilters.caratMin) marketplaceFilters.caratMin = geminiFilters.caratMin;
+            if (geminiFilters.caratMax) marketplaceFilters.caratMax = geminiFilters.caratMax;
+            if (geminiFilters.shape) marketplaceFilters.shape = [geminiFilters.shape];
+            if (geminiFilters.color) marketplaceFilters.color = [geminiFilters.color];
+            if (geminiFilters.clarity) marketplaceFilters.clarity = [geminiFilters.clarity];
+          } else {
+            // Fallback to regular search query
+            marketplaceFilters.searchQuery = searchQuery;
+          }
+        } catch (error) {
+          console.log('⚠️ Gemini parsing failed, using fallback search:', error);
+          marketplaceFilters.searchQuery = searchQuery;
+        }
+      }
 
-    applyMarketplaceFilters(marketplaceFilters);
+      applyMarketplaceFilters(marketplaceFilters);
+    };
+
+    applyFiltersAsync();
   }, [filters, searchQuery]);
 
   // Convert marketplace diamonds to Stone format

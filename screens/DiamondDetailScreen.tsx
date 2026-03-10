@@ -20,6 +20,8 @@ import { db } from '../config/firebase';
 import ImageViewing from 'react-native-image-viewing';
 import { WebView } from 'react-native-webview';
 import { useTheme } from '../context/ThemeContext';
+import { fetchJtrMedia } from '../services/jtrService';
+import { trackViewItem, trackAddToCart } from '../services/analyticsService';
 
 const { width } = Dimensions.get('window');
 
@@ -47,6 +49,16 @@ interface Stone {
   depth?: number;
   table?: number;
   images?: string[];
+  // Media fields
+  video?: string;
+  image?: string;
+  JTRCertificateNo?: string;
+  reportNo?: string;
+}
+
+interface MediaData {
+  type: 'iframe' | 'image' | 'none';
+  url: string;
 }
 
 export default function DiamondDetailScreen() {
@@ -61,6 +73,8 @@ export default function DiamondDetailScreen() {
   const [imageIndex, setImageIndex] = useState(0);
   const [imageViewerVisible, setImageViewerVisible] = useState(false);
   const [pdfViewerVisible, setPdfViewerVisible] = useState(false);
+  const [mediaData, setMediaData] = useState<MediaData>({ type: 'none', url: '' });
+  const [isLoadingMedia, setIsLoadingMedia] = useState(true);
 
   const { addToCart, isInCart } = useCartStore();
   const inCart = stone ? isInCart(stone.id) : false;
@@ -68,6 +82,69 @@ export default function DiamondDetailScreen() {
   useEffect(() => {
     loadStoneDetails();
   }, [stoneId]);
+
+  // Load media (video/360°/image) when stone is loaded
+  useEffect(() => {
+    const loadMedia = async () => {
+      if (!stone) return;
+
+      setIsLoadingMedia(true);
+
+      // Priority 1: Check CSV-uploaded video/image links first
+      if (stone.video) {
+        console.log('✅ Using CSV video link:', stone.video);
+        setMediaData({ type: 'iframe', url: stone.video });
+        setIsLoadingMedia(false);
+        return;
+      }
+
+      if (stone.image) {
+        console.log('✅ Using CSV image link:', stone.image);
+        setMediaData({ type: 'image', url: stone.image });
+        setIsLoadingMedia(false);
+        return;
+      }
+
+      // Priority 2: JTR API (if no CSV media)
+      const certNo = stone.JTRCertificateNo || stone.certificateNumber || stone.reportNo;
+
+      if (certNo) {
+        try {
+          const apiResponse = await fetchJtrMedia([certNo]);
+          const diamondMedia = apiResponse[certNo];
+
+          // If Jtr360SmCdn exists, use Jtr360Cdn (HD version) for detail screen
+          if (diamondMedia && diamondMedia.Jtr360SmCdn) {
+            // Use Jtr360Cdn if available, otherwise fallback to Jtr360SmCdn
+            const hdUrl = diamondMedia.Jtr360Cdn || diamondMedia.Jtr360SmCdn;
+            console.log('✅ Using HD 360 view (Jtr360Cdn):', hdUrl);
+            setMediaData({ type: 'iframe', url: hdUrl });
+          }
+          // StillImageUrl (image)
+          else if (diamondMedia && diamondMedia.StillImageUrl) {
+            console.log('✅ Using StillImageUrl (image)');
+            setMediaData({ type: 'image', url: diamondMedia.StillImageUrl });
+          }
+          // No media from API - show default
+          else {
+            console.log('⚠️ No media from API, showing default');
+            setMediaData({ type: 'none', url: '' });
+          }
+        } catch (error) {
+          console.error('❌ Error loading JTR media:', error);
+          // On error, show default
+          setMediaData({ type: 'none', url: '' });
+        }
+      } else {
+        // No certificate number - show default
+        setMediaData({ type: 'none', url: '' });
+      }
+
+      setIsLoadingMedia(false);
+    };
+
+    loadMedia();
+  }, [stone]);
 
   const loadStoneDetails = async () => {
     try {
@@ -89,6 +166,15 @@ export default function DiamondDetailScreen() {
         console.log('📊 Stone loaded:', stoneId, 'Status:', status);
 
         setStone(stoneData as Stone);
+
+        // Track product view in analytics
+        trackViewItem({
+          item_id: stoneDoc.id,
+          item_name: `${data.shape} ${data.carat}ct ${data.color} ${data.clarity}`,
+          item_category: 'Diamond',
+          price: data.totalPrice || data.pricePerCarat * data.carat,
+          currency: 'USD',
+        });
       } else {
         Alert.alert('Hata', 'Taş bulunamadı');
         navigation.goBack();
@@ -159,47 +245,49 @@ export default function DiamondDetailScreen() {
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <ScrollView style={styles.scrollView}>
-        {/* Image Gallery */}
-        <TouchableOpacity
-          style={[styles.imageContainer, { backgroundColor: theme.backgroundCard }]}
-          onPress={() => stone.images && stone.images.length > 0 && setImageViewerVisible(true)}
-          activeOpacity={0.9}
-        >
-          {stone.images && stone.images.length > 0 ? (
-            <>
+        {/* Media Viewer (Video/360°/Image) */}
+        <View style={[styles.mediaContainer, { backgroundColor: theme.backgroundCard }]}>
+          {isLoadingMedia ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#3b82f6" />
+              <Text style={[styles.loadingText, { color: theme.textSecondary }]}>Medya yükleniyor...</Text>
+            </View>
+          ) : mediaData.type === 'iframe' ? (
+            <WebView
+              source={{ uri: mediaData.url }}
+              style={styles.webView}
+              startInLoadingState={true}
+              renderLoading={() => (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="large" color="#3b82f6" />
+                </View>
+              )}
+              allowsFullscreenVideo={true}
+              mediaPlaybackRequiresUserAction={false}
+              javaScriptEnabled={true}
+              domStorageEnabled={true}
+            />
+          ) : mediaData.type === 'image' ? (
+            <TouchableOpacity
+              onPress={() => setImageViewerVisible(true)}
+              activeOpacity={0.9}
+            >
               <Image
-                source={{ uri: stone.images[imageIndex] }}
+                source={{ uri: mediaData.url }}
                 style={styles.image}
                 resizeMode="contain"
               />
               <View style={styles.zoomHint}>
                 <Text style={styles.zoomHintText}>🔍 Yakınlaştırmak için tıkla</Text>
               </View>
-              {stone.images.length > 1 && (
-                <View style={styles.imageDots}>
-                  {stone.images.map((_, index) => (
-                    <TouchableOpacity
-                      key={index}
-                      style={[
-                        styles.dot,
-                        imageIndex === index && styles.dotActive,
-                      ]}
-                      onPress={(e) => {
-                        e.stopPropagation();
-                        setImageIndex(index);
-                      }}
-                    />
-                  ))}
-                </View>
-              )}
-            </>
+            </TouchableOpacity>
           ) : (
             <View style={[styles.placeholderImage, { backgroundColor: theme.backgroundCard }]}>
               <Text style={styles.placeholderText}>💎</Text>
-              <Text style={[styles.placeholderSubtext, { color: theme.textDim }]}>Görsel Yok</Text>
+              <Text style={[styles.placeholderSubtext, { color: theme.textDim }]}>Medya Yok</Text>
             </View>
           )}
-        </TouchableOpacity>
+        </View>
 
         {/* Stone ID & Status */}
         <View style={[styles.header, { borderBottomColor: theme.borderLight }]}>
@@ -339,13 +427,12 @@ export default function DiamondDetailScreen() {
       </View>
 
       {/* Full Screen Image Viewer */}
-      {stone.images && stone.images.length > 0 && (
+      {mediaData.type === 'image' && mediaData.url && (
         <ImageViewing
-          images={stone.images.map((uri) => ({ uri }))}
-          imageIndex={imageIndex}
+          images={[{ uri: mediaData.url }]}
+          imageIndex={0}
           visible={imageViewerVisible}
           onRequestClose={() => setImageViewerVisible(false)}
-          onImageIndexChange={setImageIndex}
         />
       )}
 
@@ -425,11 +512,26 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
-  imageContainer: {
+  mediaContainer: {
     width: width,
     height: width,
     backgroundColor: '#f5f5f5',
     position: 'relative',
+  },
+  webView: {
+    width: '100%',
+    height: '100%',
+  },
+  loadingContainer: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 12,
+  },
+  loadingText: {
+    fontSize: 14,
+    marginTop: 8,
   },
   image: {
     width: '100%',

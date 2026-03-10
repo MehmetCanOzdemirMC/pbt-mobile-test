@@ -9,8 +9,14 @@ import { doc, getDoc } from 'firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { auth, db } from './config/firebase';
+import { initializeFirebaseAppCheck } from './config/appCheck';
+import { initializeSentry, setSentryUser } from './config/sentry';
 import { useNotifications } from './hooks/useNotifications';
 import OnboardingScreen from './screens/OnboardingScreen';
+
+// Initialize security and monitoring on app startup
+initializeSentry();
+initializeFirebaseAppCheck();
 
 // Screens
 import HomeScreen from './screens/HomeScreen';

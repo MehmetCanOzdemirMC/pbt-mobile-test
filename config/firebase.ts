@@ -2,6 +2,7 @@ import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
+import { getAnalytics, Analytics } from 'firebase/analytics';
 
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
@@ -21,4 +22,17 @@ export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
 
+// Initialize Firebase Analytics (only works on web in Expo)
+// For native analytics, use expo-firebase-analytics
+let analytics: Analytics | null = null;
+try {
+  if (typeof window !== 'undefined') {
+    analytics = getAnalytics(app);
+    console.log('✅ Firebase Analytics initialized');
+  }
+} catch (error) {
+  console.log('⚠️ Firebase Analytics not available in this environment');
+}
+
+export { analytics };
 export default app;
