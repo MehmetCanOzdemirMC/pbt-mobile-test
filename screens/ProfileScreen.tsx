@@ -238,6 +238,59 @@ export default function ProfileScreen() {
         <Text style={styles.settingsButtonText}>⚙️ Ayarlar (Dil & Para Birimi)</Text>
       </TouchableOpacity>
 
+      {/* 🧪 TEST FEATURES (NEW - Port from Web) */}
+      <View style={[styles.section, { backgroundColor: theme.backgroundCard, marginTop: 16 }]}>
+        <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>🧪 Test Features (Yeni Port)</Text>
+
+        <TouchableOpacity
+          style={[styles.testButton, { backgroundColor: `${theme.primary}15`, borderColor: theme.primary }]}
+          onPress={() => (navigation as any).navigate('Analytics')}
+        >
+          <Text style={styles.testButtonIcon}>📊</Text>
+          <Text style={[styles.testButtonText, { color: theme.primary }]}>Analytics Dashboard</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.testButton, { backgroundColor: `${theme.primary}15`, borderColor: theme.primary }]}
+          onPress={() => (navigation as any).navigate('Calculator')}
+        >
+          <Text style={styles.testButtonIcon}>💰</Text>
+          <Text style={[styles.testButtonText, { color: theme.primary }]}>Price Calculator</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.testButton, { backgroundColor: `${theme.primary}15`, borderColor: theme.primary }]}
+          onPress={() => (navigation as any).navigate('BulkImport')}
+        >
+          <Text style={styles.testButtonIcon}>📤</Text>
+          <Text style={[styles.testButtonText, { color: theme.primary }]}>Bulk Import</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.testButton, { backgroundColor: `${theme.primary}15`, borderColor: theme.primary }]}
+          onPress={() => (navigation as any).navigate('Certificate')}
+        >
+          <Text style={styles.testButtonIcon}>🔍</Text>
+          <Text style={[styles.testButtonText, { color: theme.primary }]}>Certificate Verification</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.testButton, { backgroundColor: `${theme.primary}15`, borderColor: theme.primary }]}
+          onPress={() => (navigation as any).navigate('CustomDesign')}
+        >
+          <Text style={styles.testButtonIcon}>✨</Text>
+          <Text style={[styles.testButtonText, { color: theme.primary }]}>Custom Design (3D Viewer)</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.testButton, { backgroundColor: `${theme.warning}15`, borderColor: theme.warning }]}
+          onPress={() => (navigation as any).navigate('AdminDashboard')}
+        >
+          <Text style={styles.testButtonIcon}>👑</Text>
+          <Text style={[styles.testButtonText, { color: theme.warning }]}>Admin Dashboard (6 Tabs)</Text>
+        </TouchableOpacity>
+      </View>
+
       <TouchableOpacity style={[styles.logoutButton, { backgroundColor: theme.error }]} onPress={handleLogout}>
         <Text style={styles.logoutButtonText}>🚪 Çıkış Yap</Text>
       </TouchableOpacity>
@@ -422,5 +475,21 @@ const styles = StyleSheet.create({
     color: '#4CAF50',
     textAlign: 'center',
     marginBottom: 24,
+  },
+  testButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+  },
+  testButtonIcon: {
+    fontSize: 24,
+    marginRight: 12,
+  },
+  testButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

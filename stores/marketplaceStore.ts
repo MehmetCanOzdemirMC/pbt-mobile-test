@@ -3,7 +3,8 @@ import { db } from '../config/firebase';
 import {
   collection,
   query,
-  onSnapshot
+  onSnapshot,
+  limit
 } from 'firebase/firestore';
 
 export interface Diamond {
@@ -102,11 +103,13 @@ export const useMarketplaceStore = create<MarketplaceState>((set, get) => ({
     set({ loading: true, error: null });
 
     try {
-      // Query stones collection
-      // NOTE: No where clause to avoid composite index requirement
-      // We'll filter on client-side instead
+      // Query stones collection with LIMIT for better performance
+      // Load first 200 stones (no orderBy to avoid index requirement)
       const stonesRef = collection(db, 'stones');
-      const q = query(stonesRef);
+      const q = query(
+        stonesRef,
+        limit(200) // PERFORMANCE: Only load 200 stones initially
+      );
 
       // Real-time listener
       const unsubscribe = onSnapshot(

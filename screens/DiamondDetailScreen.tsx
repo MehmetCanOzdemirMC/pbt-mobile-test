@@ -17,7 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCartStore } from '../stores/cartStore';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
-import ImageViewing from 'react-native-image-viewing';
+// ImageViewing removed - using built-in Modal instead
 import { WebView } from 'react-native-webview';
 import { useTheme } from '../context/ThemeContext';
 import { fetchJtrMedia } from '../services/jtrService';
@@ -428,12 +428,26 @@ export default function DiamondDetailScreen() {
 
       {/* Full Screen Image Viewer */}
       {mediaData.type === 'image' && mediaData.url && (
-        <ImageViewing
-          images={[{ uri: mediaData.url }]}
-          imageIndex={0}
+        <Modal
           visible={imageViewerVisible}
+          transparent={true}
+          animationType="fade"
           onRequestClose={() => setImageViewerVisible(false)}
-        />
+        >
+          <View style={styles.imageViewerContainer}>
+            <TouchableOpacity
+              style={styles.imageViewerClose}
+              onPress={() => setImageViewerVisible(false)}
+            >
+              <Text style={styles.imageViewerCloseText}>✕</Text>
+            </TouchableOpacity>
+            <Image
+              source={{ uri: mediaData.url }}
+              style={styles.fullScreenImage}
+              resizeMode="contain"
+            />
+          </View>
+        </Modal>
       )}
 
       {/* PDF Certificate Viewer */}
@@ -791,5 +805,33 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
+  },
+  // Image Viewer Styles
+  imageViewerContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.95)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imageViewerClose: {
+    position: 'absolute',
+    top: 50,
+    right: 20,
+    zIndex: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imageViewerCloseText: {
+    fontSize: 24,
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  fullScreenImage: {
+    width: '100%',
+    height: '100%',
   },
 });

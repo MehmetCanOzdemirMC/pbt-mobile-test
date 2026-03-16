@@ -11,7 +11,7 @@ import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-cont
 import { auth, db } from './config/firebase';
 import { initializeFirebaseAppCheck } from './config/appCheck';
 import { initializeSentry, setSentryUser } from './config/sentry';
-import { useNotifications } from './hooks/useNotifications';
+// import { useNotifications } from './hooks/useNotifications'; // Disabled for Expo Go
 import OnboardingScreen from './screens/OnboardingScreen';
 
 // Initialize security and monitoring on app startup
@@ -20,7 +20,7 @@ initializeFirebaseAppCheck();
 
 // Screens
 import HomeScreen from './screens/HomeScreen';
-import MarketplaceScreen from './screens/MarketplaceScreen';
+import MarketNavigator from './screens/MarketNavigator';
 import CartScreen from './screens/CartScreen';
 import MessagesScreen from './screens/MessagesScreen';
 import ConversationScreen from './screens/ConversationScreen';
@@ -39,13 +39,23 @@ import { useMessagingStore } from './stores/messagingStore';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { useFonts } from './hooks/useFonts';
 import { Home, Diamond, ShoppingCart, BarChart3, MessageCircle, Package, User } from 'lucide-react-native';
+import FloatingCalculatorButton from './components/FloatingCalculatorButton';
+
+// New Screens (Port from Web)
+import AnalyticsScreen from './screens/AnalyticsScreen';
+import CalculatorScreen from './screens/CalculatorScreen';
+import AdminDashboardScreen from './screens/admin/AdminDashboardScreen';
+import BulkImportScreen from './screens/BulkImportScreen';
+import CertificateScreen from './screens/CertificateScreen';
+import CustomDesignScreen from './screens/CustomDesignScreen';
+import MountingDetailScreen from './screens/MountingDetailScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
 // App wrapper with notifications
 function AppWithNotifications() {
-  useNotifications(); // Register for push notifications
+  // useNotifications(); // Disabled for Expo Go (requires development build)
 
   return (
     <Stack.Navigator>
@@ -118,6 +128,63 @@ function AppWithNotifications() {
           headerBackTitle: 'Geri'
         }}
       />
+      {/* New Screens (Port from Web) */}
+      <Stack.Screen
+        name="Analytics"
+        component={AnalyticsScreen}
+        options={{
+          title: 'Analytics',
+          headerBackTitle: 'Back'
+        }}
+      />
+      <Stack.Screen
+        name="Calculator"
+        component={CalculatorScreen}
+        options={{
+          title: 'Price Calculator',
+          headerBackTitle: 'Back'
+        }}
+      />
+      <Stack.Screen
+        name="AdminDashboard"
+        component={AdminDashboardScreen}
+        options={{
+          title: 'Admin Dashboard',
+          headerBackTitle: 'Back'
+        }}
+      />
+      <Stack.Screen
+        name="BulkImport"
+        component={BulkImportScreen}
+        options={{
+          title: 'Bulk Import',
+          headerBackTitle: 'Back'
+        }}
+      />
+      <Stack.Screen
+        name="Certificate"
+        component={CertificateScreen}
+        options={{
+          title: 'Certificate Verification',
+          headerBackTitle: 'Back'
+        }}
+      />
+      <Stack.Screen
+        name="MountingDetail"
+        component={MountingDetailScreen}
+        options={{
+          headerShown: false // Custom header in MountingDetailScreen
+        }}
+      />
+      <Stack.Screen
+        name="CustomDesign"
+        component={CustomDesignScreen}
+        options={{
+          title: 'Custom Design',
+          headerBackTitle: 'Back',
+          headerShown: false // Custom header in CustomDesignScreen
+        }}
+      />
     </Stack.Navigator>
   );
 }
@@ -186,31 +253,32 @@ function MainTabs() {
                      userData?.role === 'supplierInternational';
 
   return (
-    <Tab.Navigator
-      screenOptions={{
-        tabBarActiveTintColor: theme.primary,
-        tabBarInactiveTintColor: theme.textSecondary,
-        tabBarStyle: {
-          backgroundColor: theme.backgroundCard,
-          borderTopWidth: 1,
-          borderTopColor: theme.border,
-          paddingBottom: insets.bottom + 5, // Safe area + 5px padding
-          paddingTop: 5,
-          height: 60 + insets.bottom, // Base height + safe area
-        },
-        headerStyle: {
-          backgroundColor: theme.backgroundCard,
-          elevation: 0,
-          shadowOpacity: 0,
-          borderBottomWidth: 1,
-          borderBottomColor: theme.border,
-        },
-        headerTitleStyle: {
-          fontWeight: 'bold',
-          color: theme.textPrimary,
-        },
-      }}
-    >
+    <>
+      <Tab.Navigator
+        screenOptions={{
+          tabBarActiveTintColor: theme.primary,
+          tabBarInactiveTintColor: theme.textSecondary,
+          tabBarStyle: {
+            backgroundColor: theme.backgroundCard,
+            borderTopWidth: 1,
+            borderTopColor: theme.border,
+            paddingBottom: insets.bottom + 5, // Safe area + 5px padding
+            paddingTop: 5,
+            height: 60 + insets.bottom, // Base height + safe area
+          },
+          headerStyle: {
+            backgroundColor: theme.backgroundCard,
+            elevation: 0,
+            shadowOpacity: 0,
+            borderBottomWidth: 1,
+            borderBottomColor: theme.border,
+          },
+          headerTitleStyle: {
+            fontWeight: 'bold',
+            color: theme.textPrimary,
+          },
+        }}
+      >
       {!isSupplier && (
         <>
           <Tab.Screen
@@ -223,11 +291,11 @@ function MainTabs() {
             }}
           />
           <Tab.Screen
-            name="Marketplace"
-            component={MarketplaceScreen}
+            name="Market"
+            component={MarketNavigator}
             options={{
-              title: 'Marketplace',
-              tabBarLabel: 'Taşlar',
+              title: 'Market',
+              tabBarLabel: 'Market',
               tabBarIcon: ({ color, size }) => <Diamond color={color} size={size} />,
             }}
           />
@@ -296,7 +364,11 @@ function MainTabs() {
           tabBarIcon: ({ color, size }) => <User color={color} size={size} />,
         }}
       />
-    </Tab.Navigator>
+      </Tab.Navigator>
+
+      {/* Floating Calculator Button - Available on all tabs */}
+      <FloatingCalculatorButton />
+    </>
   );
 }
 
