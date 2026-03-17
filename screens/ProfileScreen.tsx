@@ -7,8 +7,10 @@ import { auth, db } from '../config/firebase';
 import { useCartStore } from '../stores/cartStore';
 import ScreenWrapper from '../components/ScreenWrapper';
 import { useTheme } from '../context/ThemeContext';
+import { useTranslation } from 'react-i18next';
 
 export default function ProfileScreen() {
+  const { t } = useTranslation();
   const { theme } = useTheme();
   const navigation = useNavigation();
   const user = auth.currentUser;
@@ -64,18 +66,18 @@ export default function ProfileScreen() {
 
   const handleLogout = async () => {
     Alert.alert(
-      'Çıkış Yap',
-      'Çıkış yapmak istediğinizden emin misiniz?',
+      t('auth.logout'),
+      t('confirmations.logout'),
       [
-        { text: 'İptal', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Çıkış Yap',
+          text: t('auth.logout'),
           style: 'destructive',
           onPress: async () => {
             try {
               await signOut(auth);
             } catch (error: any) {
-              Alert.alert('Hata', error.message);
+              Alert.alert(t('common.error'), error.message);
             }
           },
         },
@@ -103,25 +105,25 @@ export default function ProfileScreen() {
   const getRoleLabel = (role: string) => {
     console.log('User role:', role); // Debug log
 
-    if (!role) return 'Onay Bekliyor';
+    if (!role) return t('profile.rolePending');
 
     // Admin roles
-    if (role.includes('superAdmin')) return 'Süper Yönetici';
-    if (role.includes('admin')) return 'Yönetici';
+    if (role.includes('superAdmin')) return t('profile.roleSuperAdmin');
+    if (role.includes('admin')) return t('profile.roleAdmin');
 
     // Supplier roles (check specific types first)
-    if (role.includes('supplierInternational')) return 'Uluslararası Tedarikçi';
-    if (role.includes('supplierDropship')) return 'Dropship Tedarikçi';
-    if (role.includes('supplierLocal')) return 'Yerel Tedarikçi';
-    if (role.includes('supplier')) return 'Tedarikçi'; // Generic supplier
+    if (role.includes('supplierInternational')) return t('profile.roleSupplierInternational');
+    if (role.includes('supplierDropship')) return t('profile.roleSupplierDropship');
+    if (role.includes('supplierLocal')) return t('profile.roleSupplierLocal');
+    if (role.includes('supplier')) return t('profile.roleSupplier'); // Generic supplier
 
     // Retailer/Buyer roles
-    if (role.includes('verifiedRetailer')) return 'Onaylı Perakendeci';
-    if (role.includes('retailer')) return 'Perakendeci';
-    if (role.includes('buyer')) return 'Alıcı';
+    if (role.includes('verifiedRetailer')) return t('profile.roleVerifiedRetailer');
+    if (role.includes('retailer')) return t('profile.roleRetailer');
+    if (role.includes('buyer')) return t('profile.roleBuyer');
 
     // Unverified user
-    if (role.includes('unverified')) return 'Onay Bekliyor';
+    if (role.includes('unverified')) return t('profile.rolePending');
 
     // If we have a role but it doesn't match any known type
     return role; // Show the actual role value
@@ -132,7 +134,7 @@ export default function ProfileScreen() {
       <ScreenWrapper>
         <View style={[styles.loadingContainer, { backgroundColor: theme.background }]}>
           <ActivityIndicator size="large" color={theme.primary} />
-          <Text style={[styles.loadingText, { color: theme.textSecondary }]}>Profil yükleniyor...</Text>
+          <Text style={[styles.loadingText, { color: theme.textSecondary }]}>{t('profile.loading')}</Text>
         </View>
       </ScreenWrapper>
     );
@@ -142,7 +144,7 @@ export default function ProfileScreen() {
     return (
       <ScreenWrapper>
         <View style={[styles.loadingContainer, { backgroundColor: theme.background }]}>
-          <Text style={[styles.errorText, { color: theme.error }]}>Profil yüklenemedi</Text>
+          <Text style={[styles.errorText, { color: theme.error }]}>{t('profile.loadingError')}</Text>
         </View>
       </ScreenWrapper>
     );
@@ -178,48 +180,48 @@ export default function ProfileScreen() {
           onPress={() => (navigation as any).navigate('Cart')}
         >
           <Text style={[styles.statValue, { color: theme.primary }]}>{totalItems()}</Text>
-          <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Sepet</Text>
+          <Text style={[styles.statLabel, { color: theme.textSecondary }]}>{t('cart.title')}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.statBox}
           onPress={() => (navigation as any).navigate('Favorites')}
         >
           <Text style={[styles.statValue, { color: theme.primary }]}>❤️</Text>
-          <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Favoriler</Text>
+          <Text style={[styles.statLabel, { color: theme.textSecondary }]}>{t('profile.favorites')}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.statBox}
           onPress={() => (navigation as any).navigate('Orders')}
         >
           <Text style={[styles.statValue, { color: theme.primary }]}>{stats.orders}</Text>
-          <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Sipariş</Text>
+          <Text style={[styles.statLabel, { color: theme.textSecondary }]}>{t('orders.title')}</Text>
         </TouchableOpacity>
       </View>
 
       <View style={[styles.section, { backgroundColor: theme.backgroundCard }]}>
-        <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Hesap Bilgileri</Text>
+        <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>{t('profile.accountInfo')}</Text>
 
         {userData.companyName && (
           <View style={[styles.infoRow, { borderBottomColor: theme.borderLight }]}>
-            <Text style={[styles.label, { color: theme.textSecondary }]}>🏢 Firma:</Text>
+            <Text style={[styles.label, { color: theme.textSecondary }]}>{`🏢 ${t('profile.companyLabel')}`}</Text>
             <Text style={[styles.value, { color: theme.textPrimary }]}>{userData.companyName}</Text>
           </View>
         )}
 
         {userData.phone && (
           <View style={[styles.infoRow, { borderBottomColor: theme.borderLight }]}>
-            <Text style={[styles.label, { color: theme.textSecondary }]}>📞 Telefon:</Text>
+            <Text style={[styles.label, { color: theme.textSecondary }]}>{`📞 ${t('profile.phoneLabel')}`}</Text>
             <Text style={[styles.value, { color: theme.textPrimary }]}>{userData.phone}</Text>
           </View>
         )}
 
         <View style={[styles.infoRow, { borderBottomColor: theme.borderLight }]}>
-          <Text style={[styles.label, { color: theme.textSecondary }]}>📧 Email:</Text>
+          <Text style={[styles.label, { color: theme.textSecondary }]}>{`📧 ${t('profile.emailLabel')}`}</Text>
           <Text style={[styles.value, { color: theme.textPrimary }]}>{user?.email}</Text>
         </View>
 
         <View style={[styles.infoRow, { borderBottomColor: theme.borderLight }]}>
-          <Text style={[styles.label, { color: theme.textSecondary }]}>✅ Durum:</Text>
+          <Text style={[styles.label, { color: theme.textSecondary }]}>{`✅ ${t('profile.statusLabel')}`}</Text>
           <Text style={[styles.value, { color: theme.textPrimary }]}>{userData.membershipStatus || 'pending'}</Text>
         </View>
       </View>
@@ -228,19 +230,19 @@ export default function ProfileScreen() {
         style={[styles.editButton, { backgroundColor: theme.primary }]}
         onPress={() => (navigation as any).navigate('ProfileEdit')}
       >
-        <Text style={styles.editButtonText}>✏️ Profili Düzenle</Text>
+        <Text style={styles.editButtonText}>{`✏️ ${t('profile.editProfile')}`}</Text>
       </TouchableOpacity>
 
       <TouchableOpacity
         style={[styles.settingsButton, { backgroundColor: theme.success }]}
         onPress={() => (navigation as any).navigate('Settings')}
       >
-        <Text style={styles.settingsButtonText}>⚙️ Ayarlar (Dil & Para Birimi)</Text>
+        <Text style={styles.settingsButtonText}>{`⚙️ ${t('profile.settingsButton')}`}</Text>
       </TouchableOpacity>
 
       {/* 🧪 TEST FEATURES (NEW - Port from Web) */}
       <View style={[styles.section, { backgroundColor: theme.backgroundCard, marginTop: 16 }]}>
-        <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>🧪 Test Features (Yeni Port)</Text>
+        <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>{`🧪 ${t('profile.testFeatures')}`}</Text>
 
         <TouchableOpacity
           style={[styles.testButton, { backgroundColor: `${theme.primary}15`, borderColor: theme.primary }]}
@@ -292,10 +294,10 @@ export default function ProfileScreen() {
       </View>
 
       <TouchableOpacity style={[styles.logoutButton, { backgroundColor: theme.error }]} onPress={handleLogout}>
-        <Text style={styles.logoutButtonText}>🚪 Çıkış Yap</Text>
+        <Text style={styles.logoutButtonText}>{`🚪 ${t('auth.logout')}`}</Text>
       </TouchableOpacity>
 
-      <Text style={[styles.footer, { color: theme.success }]}>✅ Veriler web sitesi ile senkron</Text>
+      <Text style={[styles.footer, { color: theme.success }]}>{`✅ ${t('profile.syncedData')}`}</Text>
     </ScrollView>
     </ScreenWrapper>
   );

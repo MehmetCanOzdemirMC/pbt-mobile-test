@@ -1,8 +1,8 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export type Language = 'tr' | 'en';
-export type Currency = 'USD' | 'TRY' | 'EUR';
+export type Language = 'tr' | 'en' | 'zh';
+export type Currency = 'USD' | 'TRY' | 'EUR' | 'CNY';
 
 interface SettingsState {
   language: Language;
@@ -10,6 +10,7 @@ interface SettingsState {
   exchangeRates: {
     TRY: number;
     EUR: number;
+    CNY: number;
   };
 
   // Actions
@@ -26,6 +27,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   exchangeRates: {
     TRY: 35.5, // 1 USD = 35.5 TRY (approximate)
     EUR: 0.92, // 1 USD = 0.92 EUR (approximate)
+    CNY: 7.25, // 1 USD = 7.25 CNY (approximate)
   },
 
   setLanguage: async (language: Language) => {
@@ -69,6 +71,8 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       return usdPrice * exchangeRates.TRY;
     } else if (currency === 'EUR') {
       return usdPrice * exchangeRates.EUR;
+    } else if (currency === 'CNY') {
+      return usdPrice * exchangeRates.CNY;
     }
 
     return usdPrice;
@@ -84,6 +88,8 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
         return '₺';
       case 'EUR':
         return '€';
+      case 'CNY':
+        return '¥';
       default:
         return '$';
     }

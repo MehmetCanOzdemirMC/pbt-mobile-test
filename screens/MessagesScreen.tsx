@@ -15,6 +15,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { Alert } from 'react-native';
 import ScreenWrapper from '../components/ScreenWrapper';
 import { useTheme } from '../context/ThemeContext';
+import { useTranslation } from 'react-i18next';
 
 type RootStackParamList = {
   MainTabs: undefined;
@@ -22,6 +23,7 @@ type RootStackParamList = {
 };
 
 export default function MessagesScreen() {
+  const { t } = useTranslation();
   const { theme } = useTheme();
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const { conversations, loading, startConversation } = useMessagingStore();
@@ -94,20 +96,20 @@ export default function MessagesScreen() {
   const getOtherUserName = (conversation: Conversation) => {
     try {
       const currentUserId = auth.currentUser?.uid;
-      if (!currentUserId) return 'Unknown';
+      if (!currentUserId) return t('messages.unknown');
 
       if (!conversation.participants || !Array.isArray(conversation.participants)) {
-        return 'Unknown';
+        return t('messages.unknown');
       }
 
       const otherUserId = conversation.participants.find(id => id !== currentUserId);
-      if (!otherUserId) return 'Unknown';
+      if (!otherUserId) return t('messages.unknown');
 
       const name = conversation.participantNames?.[otherUserId];
-      return (typeof name === 'string' ? name : 'Unknown');
+      return (typeof name === 'string' ? name : t('messages.unknown'));
     } catch (error) {
       console.error('Error getting other user name:', error);
-      return 'Unknown';
+      return t('messages.unknown');
     }
   };
 
@@ -124,11 +126,11 @@ export default function MessagesScreen() {
       if (days > 7) {
         return date.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit' });
       } else if (days > 0) {
-        return `${days} gün önce`;
+        return t('messages.daysAgo', { count: days });
       } else if (hours > 0) {
-        return `${hours} saat önce`;
+        return t('messages.hoursAgo', { count: hours });
       } else {
-        return 'Az önce';
+        return t('messages.justNow');
       }
     } catch (error) {
       console.error('Error formatting time:', error);
@@ -145,7 +147,7 @@ export default function MessagesScreen() {
 
     const userName = getOtherUserName(item);
     const timeStr = formatTime(item.lastMessageTime);
-    const lastMsg = typeof item.lastMessage === 'string' ? item.lastMessage : 'Henüz mesaj yok';
+    const lastMsg = typeof item.lastMessage === 'string' ? item.lastMessage : t('messages.noMessagesYet');
     const hasUnread = (item.unreadCount || 0) > 0;
 
     // Get other user's photo (try conversation first, then fetched cache)
@@ -177,13 +179,13 @@ export default function MessagesScreen() {
             // Find the other participant
             const currentUserId = auth.currentUser?.uid;
             if (!currentUserId) {
-              Alert.alert('Hata', 'Kullanıcı oturumu bulunamadı');
+              Alert.alert(t('messages.error'), t('messages.userSessionNotFound'));
               return;
             }
 
             const otherUserId = item.participants.find((id: string) => id !== currentUserId);
             if (!otherUserId) {
-              Alert.alert('Hata', 'Karşı kullanıcı bulunamadı');
+              Alert.alert(t('messages.error'), t('messages.otherUserNotFound'));
               return;
             }
 
@@ -209,7 +211,7 @@ export default function MessagesScreen() {
             // No need to call it here
           } catch (error) {
             console.error('❌ [MessagesScreen] Error finding conversation:', error);
-            Alert.alert('Hata', 'Konuşma açılırken hata oluştu');
+            Alert.alert(t('messages.error'), t('messages.conversationOpenError'));
           } finally {
             setNavigating(false);
           }
@@ -272,7 +274,7 @@ export default function MessagesScreen() {
       <ScreenWrapper>
         <View style={[styles.loadingContainer, { backgroundColor: theme.background }]}>
           <ActivityIndicator size="large" color={theme.primary} />
-          <Text style={[styles.loadingText, { color: theme.textSecondary }]}>Mesajlar yükleniyor...</Text>
+          <Text style={[styles.loadingText, { color: theme.textSecondary }]}>{t('messages.loadingMessages')}</Text>
         </View>
       </ScreenWrapper>
     );
@@ -283,9 +285,9 @@ export default function MessagesScreen() {
       <ScreenWrapper>
         <View style={[styles.emptyContainer, { backgroundColor: theme.background }]}>
           <Text style={styles.emptyIcon}>💬</Text>
-          <Text style={[styles.emptyTitle, { color: theme.textPrimary }]}>Henüz Mesajınız Yok</Text>
+          <Text style={[styles.emptyTitle, { color: theme.textPrimary }]}>{t('messages.noMessagesYet')}</Text>
           <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
-            Tedarikçilerle veya müşterilerle sohbet başlatın
+            {t('messages.startChatWithSuppliers')}
           </Text>
         </View>
       </ScreenWrapper>

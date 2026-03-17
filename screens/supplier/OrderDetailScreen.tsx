@@ -13,6 +13,7 @@ import { db } from '../../config/firebase';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import ApplyDiscountModal from '../../components/ApplyDiscountModal';
 import { useTheme } from '../../context/ThemeContext';
+import { useTranslation } from 'react-i18next';
 
 interface OrderItem {
   stoneId: string;
@@ -47,6 +48,7 @@ export default function OrderDetailScreen() {
   const route = useRoute();
   const navigation = useNavigation();
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const { orderId } = route.params as { orderId: string };
 
   const [order, setOrder] = useState<Order | null>(null);
@@ -66,12 +68,12 @@ export default function OrderDetailScreen() {
           ...orderDoc.data(),
         } as Order);
       } else {
-        Alert.alert('Hata', 'Sipariş bulunamadı');
+        Alert.alert(t('common.error'), t('orderDetail.notFound'));
         navigation.goBack();
       }
     } catch (error) {
       console.error('Error loading order:', error);
-      Alert.alert('Hata', 'Sipariş yüklenemedi');
+      Alert.alert(t('common.error'), t('orderDetail.loadError'));
     } finally {
       setLoading(false);
     }
@@ -98,17 +100,17 @@ export default function OrderDetailScreen() {
   const getStatusText = (status: string) => {
     switch (status) {
       case 'PENDING_OFFER':
-        return 'Teklif Bekliyor';
+        return t('orderDetail.status.pendingOffer');
       case 'PENDING_PAYMENT':
-        return 'Ödeme Bekliyor';
+        return t('orderDetail.status.pendingPayment');
       case 'PAYMENT_CLAIMED':
-        return 'Ödeme Bildirimi';
+        return t('orderDetail.status.paymentClaimed');
       case 'COMPLETED':
-        return 'Tamamlandı';
+        return t('orderDetail.status.completed');
       case 'CANCELLED_BY_SUPPLIER':
-        return 'İptal (Tedarikçi)';
+        return t('orderDetail.status.cancelledSupplier');
       case 'CANCELLED_BY_BUYER':
-        return 'İptal (Alıcı)';
+        return t('orderDetail.status.cancelledBuyer');
       default:
         return status;
     }
@@ -133,7 +135,7 @@ export default function OrderDetailScreen() {
   if (!order) {
     return (
       <View style={[styles.centered, { backgroundColor: theme.background }]}>
-        <Text style={[styles.errorText, { color: theme.textDim }]}>Sipariş bulunamadı</Text>
+        <Text style={[styles.errorText, { color: theme.textDim }]}>{t('orderDetail.notFound')}</Text>
       </View>
     );
   }
@@ -161,26 +163,26 @@ export default function OrderDetailScreen() {
 
       {/* Buyer Info */}
       <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Alıcı Bilgileri</Text>
+        <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>{t('orderDetail.buyerInfo')}</Text>
         <View style={[styles.infoCard, { backgroundColor: theme.backgroundCard }]}>
-          <Text style={[styles.infoLabel, { color: theme.textDim }]}>İsim</Text>
+          <Text style={[styles.infoLabel, { color: theme.textDim }]}>{t('orderDetail.name')}</Text>
           <Text style={[styles.infoValue, { color: theme.textPrimary }]}>{order.buyerName || 'N/A'}</Text>
 
           {order.buyerCompany && (
             <>
-              <Text style={[styles.infoLabel, { color: theme.textDim }]}>Şirket</Text>
+              <Text style={[styles.infoLabel, { color: theme.textDim }]}>{t('orderDetail.company')}</Text>
               <Text style={[styles.infoValue, { color: theme.textPrimary }]}>{order.buyerCompany}</Text>
             </>
           )}
 
-          <Text style={[styles.infoLabel, { color: theme.textDim }]}>E-posta</Text>
+          <Text style={[styles.infoLabel, { color: theme.textDim }]}>{t('orderDetail.email')}</Text>
           <Text style={[styles.infoValue, { color: theme.textPrimary }]}>{order.buyerEmail || 'N/A'}</Text>
         </View>
       </View>
 
       {/* Items */}
       <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Taşlar ({order.items?.length || 0})</Text>
+        <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>{t('orderDetail.stones')} ({order.items?.length || 0})</Text>
         {order.items?.map((item, index) => (
           <View key={index} style={[styles.itemCard, { backgroundColor: theme.backgroundCard }]}>
             <View style={styles.itemHeader}>
@@ -197,7 +199,7 @@ export default function OrderDetailScreen() {
             </View>
             {item.discountedPrice && item.discountedPrice < item.originalPrice && (
               <Text style={[styles.originalPrice, { color: theme.textDim }]}>
-                Orijinal: ${item.originalPrice?.toLocaleString()}
+                {t('orderDetail.original')}: ${item.originalPrice?.toLocaleString()}
               </Text>
             )}
           </View>
@@ -206,22 +208,22 @@ export default function OrderDetailScreen() {
 
       {/* Price Summary */}
       <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Fiyat Özeti</Text>
+        <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>{t('orderDetail.priceSummary')}</Text>
         <View style={[styles.summaryCard, { backgroundColor: theme.backgroundCard }]}>
           <View style={styles.summaryRow}>
-            <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>Orijinal Toplam</Text>
+            <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>{t('orderDetail.originalTotal')}</Text>
             <Text style={[styles.summaryValue, { color: theme.textPrimary }]}>${order.originalTotal?.toLocaleString() || 0}</Text>
           </View>
 
           {order.totalDiscount && order.totalDiscount > 0 && (
             <View style={[styles.summaryRow, styles.discountRow]}>
-              <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>İndirim</Text>
+              <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>{t('orderDetail.discount')}</Text>
               <Text style={[styles.discountValue, { color: theme.success }]}>-${order.totalDiscount?.toLocaleString()}</Text>
             </View>
           )}
 
           <View style={[styles.summaryRow, styles.totalRow]}>
-            <Text style={[styles.totalLabel, { color: theme.textPrimary }]}>Toplam</Text>
+            <Text style={[styles.totalLabel, { color: theme.textPrimary }]}>{t('orderDetail.total')}</Text>
             <Text style={[styles.totalValue, { color: theme.primary }]}>${order.finalTotal?.toLocaleString() || 0}</Text>
           </View>
         </View>
@@ -234,7 +236,7 @@ export default function OrderDetailScreen() {
             style={[styles.discountButton, { backgroundColor: theme.success }]}
             onPress={handleApplyDiscount}
           >
-            <Text style={styles.discountButtonText}>İndirim Uygula</Text>
+            <Text style={styles.discountButtonText}>{t('orderDetail.applyDiscount')}</Text>
           </TouchableOpacity>
         </View>
       )}

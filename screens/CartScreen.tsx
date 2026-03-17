@@ -9,11 +9,13 @@ import {
   ActivityIndicator
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { useCartStore, CartItem } from '../stores/cartStore';
 import ScreenWrapper from '../components/ScreenWrapper';
 import { useTheme } from '../context/ThemeContext';
 
 export default function CartScreen() {
+  const { t } = useTranslation();
   const { theme } = useTheme();
   const navigation = useNavigation();
   const { items, loading, loadCart, removeFromCart, clearCart, totalPrice, checkExpiry } = useCartStore();
@@ -25,19 +27,19 @@ export default function CartScreen() {
 
   const handleRemoveItem = async (stoneId: string) => {
     Alert.alert(
-      'Sepetten Çıkar',
-      'Bu taşı sepetten çıkarmak istediğinizden emin misiniz?',
+      t('cart.removeFromCart'),
+      t('cart.confirmRemove'),
       [
-        { text: 'İptal', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Çıkar',
+          text: t('cart.remove'),
           style: 'destructive',
           onPress: async () => {
             try {
               await removeFromCart(stoneId);
-              Alert.alert('Başarılı', 'Taş sepetten çıkarıldı');
+              Alert.alert(t('common.success'), t('cart.stoneRemoved'));
             } catch (error) {
-              Alert.alert('Hata', 'Taş çıkarılırken bir hata oluştu');
+              Alert.alert(t('common.error'), t('cart.removeError'));
             }
           },
         },
@@ -47,19 +49,19 @@ export default function CartScreen() {
 
   const handleClearCart = async () => {
     Alert.alert(
-      'Sepeti Temizle',
-      'Sepetteki tüm ürünleri silmek istediğinizden emin misiniz?',
+      t('cart.clearCart'),
+      t('cart.confirmClearAll'),
       [
-        { text: 'İptal', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Temizle',
+          text: t('cart.clear'),
           style: 'destructive',
           onPress: async () => {
             try {
               await clearCart();
-              Alert.alert('Başarılı', 'Sepet temizlendi');
+              Alert.alert(t('common.success'), t('cart.cartCleared'));
             } catch (error) {
-              Alert.alert('Hata', 'Sepet temizlenirken bir hata oluştu');
+              Alert.alert(t('common.error'), t('cart.clearError'));
             }
           },
         },
@@ -74,11 +76,11 @@ export default function CartScreen() {
     const remaining = oneHour - elapsed;
 
     if (remaining <= 0) {
-      return 'Süresi dolmuş';
+      return t('cart.expired');
     }
 
     const minutes = Math.floor(remaining / 60000);
-    return `${minutes} dk kaldı`;
+    return t('cart.timeRemaining', { minutes });
   };
 
   const renderCartItem = ({ item }: { item: CartItem }) => (
@@ -92,28 +94,28 @@ export default function CartScreen() {
 
       <View style={styles.itemBody}>
         <View style={[styles.row, { borderBottomColor: theme.borderLight }]}>
-          <Text style={[styles.label, { color: theme.textSecondary }]}>Şekil:</Text>
+          <Text style={[styles.label, { color: theme.textSecondary }]}>{t('cart.shape')}:</Text>
           <Text style={[styles.value, { color: theme.textPrimary }]}>{item.shape}</Text>
         </View>
 
         <View style={[styles.row, { borderBottomColor: theme.borderLight }]}>
-          <Text style={[styles.label, { color: theme.textSecondary }]}>Karat:</Text>
+          <Text style={[styles.label, { color: theme.textSecondary }]}>{t('cart.carat')}:</Text>
           <Text style={[styles.value, { color: theme.textPrimary }]}>{item.carat.toFixed(2)} CT</Text>
         </View>
 
         <View style={[styles.row, { borderBottomColor: theme.borderLight }]}>
-          <Text style={[styles.label, { color: theme.textSecondary }]}>Renk:</Text>
+          <Text style={[styles.label, { color: theme.textSecondary }]}>{t('cart.color')}:</Text>
           <Text style={[styles.value, { color: theme.textPrimary }]}>{item.color}</Text>
         </View>
 
         <View style={[styles.row, { borderBottomColor: theme.borderLight }]}>
-          <Text style={[styles.label, { color: theme.textSecondary }]}>Berraklık:</Text>
+          <Text style={[styles.label, { color: theme.textSecondary }]}>{t('cart.clarity')}:</Text>
           <Text style={[styles.value, { color: theme.textPrimary }]}>{item.clarity}</Text>
         </View>
 
         {item.supplierName && (
           <View style={[styles.row, { borderBottomColor: theme.borderLight }]}>
-            <Text style={[styles.label, { color: theme.textSecondary }]}>Tedarikçi:</Text>
+            <Text style={[styles.label, { color: theme.textSecondary }]}>{t('cart.supplier')}:</Text>
             <Text style={[styles.value, { color: theme.textPrimary }]}>{item.supplierName}</Text>
           </View>
         )}
@@ -121,7 +123,7 @@ export default function CartScreen() {
 
       <View style={[styles.itemFooter, { backgroundColor: theme.background }]}>
         <View>
-          <Text style={[styles.priceLabel, { color: theme.textSecondary }]}>Fiyat</Text>
+          <Text style={[styles.priceLabel, { color: theme.textSecondary }]}>{t('cart.price')}</Text>
           <Text style={[styles.price, { color: theme.primary }]}>${item.totalPrice.toLocaleString()}</Text>
         </View>
         <View style={[styles.expiryContainer, { backgroundColor: theme.warningLight + '20' }]}>
@@ -136,7 +138,7 @@ export default function CartScreen() {
       <ScreenWrapper>
         <View style={[styles.loadingContainer, { backgroundColor: theme.background }]}>
           <ActivityIndicator size="large" color={theme.primary} />
-          <Text style={[styles.loadingText, { color: theme.textSecondary }]}>Sepet yükleniyor...</Text>
+          <Text style={[styles.loadingText, { color: theme.textSecondary }]}>{t('cart.loading')}</Text>
         </View>
       </ScreenWrapper>
     );
@@ -147,8 +149,8 @@ export default function CartScreen() {
       <ScreenWrapper>
         <View style={[styles.emptyContainer, { backgroundColor: theme.background }]}>
           <Text style={styles.emptyIcon}>🛒</Text>
-          <Text style={[styles.emptyTitle, { color: theme.textPrimary }]}>Sepetiniz Boş</Text>
-          <Text style={[styles.emptyText, { color: theme.textSecondary }]}>Marketplace'den taş ekleyerek başlayın</Text>
+          <Text style={[styles.emptyTitle, { color: theme.textPrimary }]}>{t('cart.emptyTitle')}</Text>
+          <Text style={[styles.emptyText, { color: theme.textSecondary }]}>{t('cart.emptyMessage')}</Text>
         </View>
       </ScreenWrapper>
     );
@@ -158,9 +160,9 @@ export default function CartScreen() {
     <ScreenWrapper>
       <View style={[styles.container, { backgroundColor: theme.background }]}>
         <View style={[styles.header, { backgroundColor: theme.backgroundCard, borderBottomColor: theme.border }]}>
-          <Text style={[styles.headerTitle, { color: theme.textPrimary }]}>🛒 Sepetim ({items.length} Taş)</Text>
+          <Text style={[styles.headerTitle, { color: theme.textPrimary }]}>🛒 {t('cart.myCart', { count: items.length })}</Text>
           <TouchableOpacity onPress={handleClearCart}>
-            <Text style={[styles.clearButton, { color: theme.error }]}>Temizle</Text>
+            <Text style={[styles.clearButton, { color: theme.error }]}>{t('cart.clear')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -173,7 +175,7 @@ export default function CartScreen() {
 
         <View style={[styles.summaryContainer, { backgroundColor: theme.backgroundCard, borderTopColor: theme.border }]}>
           <View style={styles.summaryRow}>
-            <Text style={[styles.summaryLabel, { color: theme.textPrimary }]}>Toplam:</Text>
+            <Text style={[styles.summaryLabel, { color: theme.textPrimary }]}>{t('cart.total')}:</Text>
             <Text style={[styles.summaryValue, { color: theme.primary }]}>${totalPrice().toLocaleString()}</Text>
           </View>
 
@@ -181,11 +183,11 @@ export default function CartScreen() {
             style={[styles.checkoutButton, { backgroundColor: theme.success }]}
             onPress={() => navigation.navigate('Checkout' as never)}
           >
-            <Text style={styles.checkoutButtonText}>Sipariş Ver 🚀</Text>
+            <Text style={styles.checkoutButtonText}>{t('cart.placeOrder')} 🚀</Text>
           </TouchableOpacity>
 
           <Text style={[styles.note, { color: theme.textDim }]}>
-            ℹ️ Sepetteki ürünler 1 saat sonra otomatik olarak silinir
+            ℹ️ {t('cart.expiryNote')}
           </Text>
         </View>
       </View>

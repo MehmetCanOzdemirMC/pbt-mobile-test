@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   ScrollView
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Gem } from 'lucide-react-native';
 
 // Mock stones (replace with real Firestore data)
@@ -30,11 +31,13 @@ interface Props {
 }
 
 export default function StoneSelectorStep({ selectedStone, onSelect, theme }: Props) {
+  const { t } = useTranslation();
+
   return (
     <View style={styles.container}>
-      <Text style={[styles.title, { color: theme.textPrimary }]}>Choose a Stone</Text>
+      <Text style={[styles.title, { color: theme.textPrimary }]}>{t('customDesign.selectStone')}</Text>
       <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-        Select the diamond for your custom design
+        {t('customDesign.selectStoneDescription')}
       </Text>
 
       <ScrollView style={styles.list} contentContainerStyle={styles.listContent}>

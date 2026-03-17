@@ -12,6 +12,7 @@ import { useNavigation } from '@react-navigation/native';
 import { auth, db } from '../config/firebase';
 import { collection, query, where, onSnapshot, or, orderBy } from 'firebase/firestore';
 import { useTheme } from '../context/ThemeContext';
+import { useTranslation } from 'react-i18next';
 
 interface Order {
   id: string;
@@ -30,13 +31,13 @@ interface Order {
   createdAt?: any;
 }
 
-const STATUS_LABELS: { [key: string]: string } = {
-  NEGOTIATING: '🔄 Görüşülüyor',
-  PENDING_PAYMENT: '⏳ Ödeme Bekleniyor',
-  PAYMENT_CLAIMED: '💳 Ödeme İddia Edildi',
-  COMPLETED: '✅ Tamamlandı',
-  CANCELLED: '❌ İptal Edildi',
-};
+const getStatusLabels = (t: any): { [key: string]: string } => ({
+  NEGOTIATING: t('orders.status.negotiating'),
+  PENDING_PAYMENT: t('orders.status.pendingPayment'),
+  PAYMENT_CLAIMED: t('orders.status.paymentClaimed'),
+  COMPLETED: t('orders.status.completed'),
+  CANCELLED: t('orders.status.cancelled'),
+});
 
 const STATUS_COLORS: { [key: string]: string } = {
   NEGOTIATING: '#FF9800',
@@ -47,6 +48,7 @@ const STATUS_COLORS: { [key: string]: string } = {
 };
 
 export default function OrdersScreen() {
+  const { t } = useTranslation();
   const { theme } = useTheme();
   const navigation = useNavigation();
   const [orders, setOrders] = useState<Order[]>([]);
@@ -55,6 +57,7 @@ export default function OrdersScreen() {
   const [filter, setFilter] = useState<string>('ALL');
 
   const currentUserId = auth.currentUser?.uid;
+  const STATUS_LABELS = getStatusLabels(t);
 
   useEffect(() => {
     if (!currentUserId) return;
@@ -132,7 +135,7 @@ export default function OrdersScreen() {
             <Text style={[styles.orderId, { color: theme.textPrimary }]}>{item.orderId}</Text>
             <View style={[styles.roleBadge, { backgroundColor: role === 'BUYER' ? '#2196F3' : '#FF9800' }]}>
               <Text style={styles.roleBadgeText}>
-                {role === 'BUYER' ? '🛍️ Alıcı' : '📦 Satıcı'}
+                {role === 'BUYER' ? t('orders.role.buyer') : t('orders.role.supplier')}
               </Text>
             </View>
           </View>
@@ -145,19 +148,19 @@ export default function OrdersScreen() {
         <View style={styles.orderDetails}>
           <Text style={[styles.orderDetailText, { color: theme.textSecondary }]}>
             {role === 'BUYER'
-              ? `📍 Tedarikçi: ${item.supplierName}`
-              : `👤 Alıcı: ${item.buyerEmail}`
+              ? t('orders.supplier', { name: item.supplierName })
+              : t('orders.buyer', { email: item.buyerEmail })
             }
           </Text>
           <Text style={[styles.orderDetailText, { color: theme.textSecondary }]}>
-            📦 {item.items.length} ürün
+            {t('orders.itemCount', { count: item.items.length })}
           </Text>
           <Text style={[styles.orderDetailText, { color: theme.textSecondary }]}>
-            💰 Toplam: ${item.finalTotal.toLocaleString()}
+            {t('orders.total', { amount: item.finalTotal.toLocaleString() })}
           </Text>
           {item.createdAt && (
             <Text style={[styles.orderDate, { color: theme.textDim }]}>
-              📅 {formatDate(item.createdAt)}
+              {t('orders.date', { date: formatDate(item.createdAt) })}
             </Text>
           )}
         </View>
@@ -169,7 +172,7 @@ export default function OrdersScreen() {
     return (
       <View style={[styles.centerContainer, { backgroundColor: theme.background }]}>
         <ActivityIndicator size="large" color={theme.primary} />
-        <Text style={[styles.loadingText, { color: theme.textSecondary }]}>Siparişler yükleniyor...</Text>
+        <Text style={[styles.loadingText, { color: theme.textSecondary }]}>{t('orders.loading')}</Text>
       </View>
     );
   }
@@ -191,7 +194,7 @@ export default function OrdersScreen() {
             { color: theme.textSecondary },
             filter === 'ALL' && styles.filterTabTextActive
           ]}>
-            Tümü ({orders.length})
+            {t('orders.filter.all', { count: orders.length })}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -207,7 +210,7 @@ export default function OrdersScreen() {
             { color: theme.textSecondary },
             filter === 'NEGOTIATING' && styles.filterTabTextActive
           ]}>
-            Görüşülüyor
+            {t('orders.filter.negotiating')}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -223,7 +226,7 @@ export default function OrdersScreen() {
             { color: theme.textSecondary },
             filter === 'PENDING_PAYMENT' && styles.filterTabTextActive
           ]}>
-            Bekliyor
+            {t('orders.filter.pending')}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -239,7 +242,7 @@ export default function OrdersScreen() {
             { color: theme.textSecondary },
             filter === 'COMPLETED' && styles.filterTabTextActive
           ]}>
-            Tamamlandı
+            {t('orders.filter.completed')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -248,11 +251,11 @@ export default function OrdersScreen() {
       {filteredOrders.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyIcon}>📦</Text>
-          <Text style={[styles.emptyTitle, { color: theme.textPrimary }]}>Sipariş Bulunamadı</Text>
+          <Text style={[styles.emptyTitle, { color: theme.textPrimary }]}>{t('orders.empty.title')}</Text>
           <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
             {filter === 'ALL'
-              ? 'Henüz hiç siparişiniz yok'
-              : `${STATUS_LABELS[filter]} durumunda sipariş yok`
+              ? t('orders.empty.noOrders')
+              : t('orders.empty.noOrdersForFilter', { status: STATUS_LABELS[filter] })
             }
           </Text>
         </View>

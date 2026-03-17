@@ -6,6 +6,7 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../context/ThemeContext';
 import MarketplaceScreen from './MarketplaceScreen';
 import MountingsListScreen from './MountingsListScreen';
@@ -14,6 +15,7 @@ const Tab = createMaterialTopTabNavigator();
 
 export default function MarketNavigator() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   console.log('🏪 [MarketNavigator] Rendering');
 
@@ -44,12 +46,12 @@ export default function MarketNavigator() {
         <Tab.Screen
           name="Taşlar"
           component={MarketplaceScreen}
-          options={{ title: '💎 Taşlar' }}
+          options={{ title: `💎 ${t('marketplace.stones')}` }}
         />
         <Tab.Screen
           name="Monturlar"
           component={MountingsListScreen}
-          options={{ title: '✨ Monturlar' }}
+          options={{ title: `✨ ${t('marketplace.mountings')}` }}
         />
       </Tab.Navigator>
     </View>

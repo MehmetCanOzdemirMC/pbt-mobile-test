@@ -24,6 +24,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import OrderCard from '../components/OrderCard';
 import ScreenWrapper from '../components/ScreenWrapper';
 import { useTheme } from '../context/ThemeContext';
+import { useTranslation } from 'react-i18next';
 
 interface Order {
   id: string;
@@ -43,6 +44,7 @@ interface Order {
 }
 
 export default function ConversationScreen() {
+  const { t } = useTranslation();
   const { theme } = useTheme();
   const route = useRoute();
   const { conversationId } = route.params as { conversationId: string };
@@ -97,7 +99,7 @@ export default function ConversationScreen() {
               if (userDoc.exists()) {
                 const userData = userDoc.data();
                 setOtherParticipantData({
-                  name: userData.name || 'Unknown',
+                  name: userData.name || t('conversation.unknown'),
                   surname: userData.surname || '',
                   photoURL: userData.photoURL || null,
                   role: userData.role || 'user'
@@ -213,7 +215,7 @@ export default function ConversationScreen() {
       console.log('✅ [ConversationScreen] Message sent successfully');
     } catch (error) {
       console.error('❌ [ConversationScreen] Error sending message:', error);
-      Alert.alert('Hata', 'Mesaj gönderilemedi: ' + (error as Error).message);
+      Alert.alert(t('conversation.error'), t('conversation.messageSendError') + ': ' + (error as Error).message);
     }
   };
 
@@ -249,7 +251,7 @@ export default function ConversationScreen() {
       // Request permission
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('İzin Gerekli', 'Galeriye erişim izni gereklidir.');
+        Alert.alert(t('conversation.permissionRequired'), t('conversation.galleryPermissionMessage'));
         return;
       }
 
@@ -281,14 +283,14 @@ export default function ConversationScreen() {
 
           console.log('[Image] ✅ Image sent successfully');
         } catch (error) {
-          Alert.alert('Hata', 'Resim yüklenirken hata oluştu');
+          Alert.alert(t('conversation.error'), t('conversation.imageUploadError'));
         } finally {
           setUploading(false);
         }
       }
     } catch (error) {
       console.error('[Image] Error picking image:', error);
-      Alert.alert('Hata', 'Resim seçilirken hata oluştu');
+      Alert.alert(t('conversation.error'), t('conversation.imagePickError'));
     }
   };
 
@@ -305,7 +307,7 @@ export default function ConversationScreen() {
 
         // Check file size (max 25MB)
         if (asset.size && asset.size > 25 * 1024 * 1024) {
-          Alert.alert('Hata', 'Dosya boyutu 25MB\'dan küçük olmalıdır.');
+          Alert.alert(t('conversation.error'), t('conversation.fileSizeError'));
           return;
         }
 
@@ -330,14 +332,14 @@ export default function ConversationScreen() {
 
           console.log('[File] ✅ File sent successfully');
         } catch (error) {
-          Alert.alert('Hata', 'Dosya yüklenirken hata oluştu');
+          Alert.alert(t('conversation.error'), t('conversation.fileUploadError'));
         } finally {
           setUploading(false);
         }
       }
     } catch (error) {
       console.error('[File] Error picking document:', error);
-      Alert.alert('Hata', 'Dosya seçilirken hata oluştu');
+      Alert.alert(t('conversation.error'), t('conversation.filePickError'));
     }
   };
 
@@ -346,7 +348,7 @@ export default function ConversationScreen() {
     if (Platform.OS === 'ios') {
       ActionSheetIOS.showActionSheetWithOptions(
         {
-          options: ['İptal', '📷 Resim Seç', '📎 Dosya Seç'],
+          options: [t('conversation.cancel'), t('conversation.selectImage'), t('conversation.selectFile')],
           cancelButtonIndex: 0,
         },
         (buttonIndex) => {
@@ -360,12 +362,12 @@ export default function ConversationScreen() {
     } else {
       // Android: Show simple alert
       Alert.alert(
-        'Dosya Ekle',
-        'Hangi türde dosya eklemek istersiniz?',
+        t('conversation.addFile'),
+        t('conversation.addFilePrompt'),
         [
-          { text: 'İptal', style: 'cancel' },
-          { text: '📷 Resim', onPress: handleImagePick },
-          { text: '📎 Dosya', onPress: handleDocumentPick },
+          { text: t('conversation.cancel'), style: 'cancel' },
+          { text: t('conversation.image'), onPress: handleImagePick },
+          { text: t('conversation.file'), onPress: handleDocumentPick },
         ]
       );
     }
@@ -472,14 +474,14 @@ export default function ConversationScreen() {
           {messageType === 'file' && fileUrl && (
             <TouchableOpacity
               style={styles.fileContainer}
-              onPress={() => Alert.alert('Dosya', fileName || 'Dosya')}
+              onPress={() => Alert.alert(t('conversation.file'), fileName || t('conversation.file'))}
             >
               <Text style={styles.fileIcon}>📎</Text>
               <Text style={[
                 styles.fileName,
                 isCurrentUser ? styles.fileNameRight : { color: theme.textPrimary }
               ]}>
-                {fileName || 'File'}
+                {fileName || t('conversation.file')}
               </Text>
             </TouchableOpacity>
           )}
@@ -532,7 +534,7 @@ export default function ConversationScreen() {
             <Text style={[styles.headerName, { color: theme.textPrimary }]}>
               {otherParticipantData.name} {otherParticipantData.surname}
             </Text>
-            <Text style={[styles.headerStatus, { color: theme.success }]}>Online</Text>
+            <Text style={[styles.headerStatus, { color: theme.success }]}>{t('conversation.online')}</Text>
           </View>
         </View>
       )}
@@ -572,10 +574,10 @@ export default function ConversationScreen() {
                   {loadingMore[conversationId] ? (
                     <>
                       <ActivityIndicator size="small" color={theme.primary} />
-                      <Text style={[styles.loadMoreText, { color: theme.primary }]}>Yükleniyor...</Text>
+                      <Text style={[styles.loadMoreText, { color: theme.primary }]}>{t('conversation.loading')}</Text>
                     </>
                   ) : (
-                    <Text style={[styles.loadMoreText, { color: theme.primary }]}>⬆️ Eski Mesajları Yükle</Text>
+                    <Text style={[styles.loadMoreText, { color: theme.primary }]}>{t('conversation.loadOldMessages')}</Text>
                   )}
                 </TouchableOpacity>
               </View>
@@ -584,8 +586,8 @@ export default function ConversationScreen() {
             {/* Empty messages prompt - show ONLY if no messages */}
             {conversationMessages.length === 0 && (
               <View style={styles.emptyContainer}>
-                <Text style={[styles.emptyText, { color: theme.textSecondary }]}>Henüz mesaj yok</Text>
-                <Text style={[styles.emptySubtext, { color: theme.textDim }]}>İlk mesajı gönderin</Text>
+                <Text style={[styles.emptyText, { color: theme.textSecondary }]}>{t('conversation.noMessages')}</Text>
+                <Text style={[styles.emptySubtext, { color: theme.textDim }]}>{t('conversation.sendFirstMessage')}</Text>
               </View>
             )}
           </>
@@ -599,7 +601,7 @@ export default function ConversationScreen() {
         {uploading && (
           <View style={[styles.uploadingOverlay, { backgroundColor: theme.backgroundCard + 'F0' }]}>
             <ActivityIndicator size="large" color={theme.primary} />
-            <Text style={[styles.uploadingText, { color: theme.primary }]}>Yükleniyor...</Text>
+            <Text style={[styles.uploadingText, { color: theme.primary }]}>{t('conversation.uploading')}</Text>
           </View>
         )}
 
@@ -613,7 +615,7 @@ export default function ConversationScreen() {
 
         <TextInput
           style={[styles.input, { backgroundColor: theme.background, color: theme.textPrimary }]}
-          placeholder="Mesajınızı yazın..."
+          placeholder={t('conversation.typeMessage')}
           placeholderTextColor={theme.textDim}
           value={messageText}
           onChangeText={setMessageText}

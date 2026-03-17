@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { doc, getDoc } from 'firebase/firestore';
+import { useTranslation } from 'react-i18next';
 import { auth, db } from '../config/firebase';
 import SupplierDashboardScreen from './SupplierDashboardScreen';
 import ScreenWrapper from '../components/ScreenWrapper';
 import { useTheme } from '../context/ThemeContext';
 
 export default function HomeScreen() {
+  const { t } = useTranslation();
   const { theme } = useTheme();
   const user = auth.currentUser;
   const [userRole, setUserRole] = useState<string | null>(null);
@@ -50,21 +52,21 @@ export default function HomeScreen() {
     <ScreenWrapper>
       <ScrollView style={[styles.container, { backgroundColor: theme.background }]}>
         <View style={[styles.header, { backgroundColor: theme.backgroundCard, borderBottomColor: theme.border }]}>
-          <Text style={[styles.title, { color: theme.textPrimary }]}>🏠 Ana Sayfa</Text>
-          <Text style={[styles.subtitle, { color: theme.textSecondary }]}>Hoş geldiniz, {user?.displayName || user?.email}</Text>
+          <Text style={[styles.title, { color: theme.textPrimary }]}>🏠 {t('home.title')}</Text>
+          <Text style={[styles.subtitle, { color: theme.textSecondary }]}>{t('home.welcome', { name: user?.displayName || user?.email })}</Text>
         </View>
 
         <View style={[styles.card, { backgroundColor: theme.backgroundCard }]}>
-          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>📊 Hızlı Erişim</Text>
-          <Text style={[styles.cardText, { color: theme.textSecondary }]}>• Marketplace'den taş görebilirsiniz</Text>
-          <Text style={[styles.cardText, { color: theme.textSecondary }]}>• Mesajlarınızı kontrol edin</Text>
-          <Text style={[styles.cardText, { color: theme.textSecondary }]}>• Profilinizi düzenleyin</Text>
+          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>📊 {t('home.quickAccess.title')}</Text>
+          <Text style={[styles.cardText, { color: theme.textSecondary }]}>• {t('home.quickAccess.viewMarketplace')}</Text>
+          <Text style={[styles.cardText, { color: theme.textSecondary }]}>• {t('home.quickAccess.checkMessages')}</Text>
+          <Text style={[styles.cardText, { color: theme.textSecondary }]}>• {t('home.quickAccess.editProfile')}</Text>
         </View>
 
         <View style={[styles.card, { backgroundColor: theme.backgroundCard }]}>
-          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>ℹ️ Test Modu</Text>
+          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>ℹ️ {t('home.testMode.title')}</Text>
           <Text style={[styles.cardText, { color: theme.textSecondary }]}>
-            Bu mobil uygulama test amaçlıdır. Veriler web sitesi ile senkronize çalışır.
+            {t('home.testMode.description')}
           </Text>
         </View>
       </ScrollView>

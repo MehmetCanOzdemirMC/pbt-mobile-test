@@ -14,7 +14,9 @@ import {
   ScrollView,
   Alert
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
+import { useTranslation } from 'react-i18next';
 import { ArrowRight, ArrowLeft, ShoppingCart, Sparkles } from 'lucide-react-native';
 import { db, auth } from '../config/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
@@ -33,6 +35,8 @@ enum Step {
 
 export default function CustomDesignScreen({ navigation }: any) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
   const user = auth.currentUser;
   const addToCart = useCartStore((state: any) => state.addItem);
 
@@ -47,11 +51,11 @@ export default function CustomDesignScreen({ navigation }: any) {
 
   const handleNextStep = () => {
     if (currentStep === Step.SELECT_MOUNTING && !canProceedToStone) {
-      Alert.alert('Error', 'Please select a mounting first');
+      Alert.alert(t('common.error'), t('customDesign.selectMountingFirst') || 'Please select a mounting first');
       return;
     }
     if (currentStep === Step.SELECT_STONE && !canProceedToCustomize) {
-      Alert.alert('Error', 'Please select a stone first');
+      Alert.alert(t('common.error'), t('customDesign.selectStoneFirst') || 'Please select a stone first');
       return;
     }
 
@@ -66,13 +70,13 @@ export default function CustomDesignScreen({ navigation }: any) {
 
   const handleAddToCart = async () => {
     if (!user) {
-      Alert.alert('Login Required', 'Please login to add to cart');
+      Alert.alert(t('auth.loginRequired'), t('customDesign.loginToAddCart') || 'Please login to add to cart');
       navigation.navigate('Login');
       return;
     }
 
     if (!selectedMounting || !selectedStone) {
-      Alert.alert('Error', 'Please complete all steps');
+      Alert.alert(t('common.error'), t('customDesign.completeAllSteps') || 'Please complete all steps');
       return;
     }
 
@@ -120,32 +124,39 @@ export default function CustomDesignScreen({ navigation }: any) {
       };
 
       await addToCart(comboItem);
-      Alert.alert('Success', 'Design added to cart!');
+      Alert.alert(t('common.success'), t('customDesign.designAdded'));
       navigation.goBack();
     } catch (error: any) {
       console.error('Add to cart error:', error);
-      Alert.alert('Error', 'Failed to add to cart');
+      Alert.alert(t('common.error'), t('customDesign.failedToAdd') || 'Failed to add to cart');
     } finally {
       setLoading(false);
     }
   };
 
   const stepTitles = {
-    [Step.SELECT_MOUNTING]: 'Select Mounting',
-    [Step.SELECT_STONE]: 'Select Stone',
-    [Step.CUSTOMIZE]: 'Customize Design'
+    [Step.SELECT_MOUNTING]: t('customDesign.selectMounting'),
+    [Step.SELECT_STONE]: t('customDesign.selectStone'),
+    [Step.CUSTOMIZE]: t('customDesign.customizeDesign')
   };
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       {/* Header */}
-      <View style={[styles.header, { backgroundColor: theme.backgroundCard, borderBottomColor: theme.border }]}>
+      <View style={[
+        styles.header,
+        {
+          backgroundColor: theme.backgroundCard,
+          borderBottomColor: theme.border,
+          paddingTop: insets.top > 0 ? insets.top : 16
+        }
+      ]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <ArrowLeft size={24} color={theme.textPrimary} />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
           <Sparkles size={24} color={theme.primary} />
-          <Text style={[styles.title, { color: theme.textPrimary }]}>Custom Design</Text>
+          <Text style={[styles.title, { color: theme.textPrimary }]}>{t('customDesign.title')}</Text>
         </View>
       </View>
 
@@ -206,14 +217,21 @@ export default function CustomDesignScreen({ navigation }: any) {
       </ScrollView>
 
       {/* Footer Navigation */}
-      <View style={[styles.footer, { backgroundColor: theme.backgroundCard, borderTopColor: theme.border }]}>
+      <View style={[
+        styles.footer,
+        {
+          backgroundColor: theme.backgroundCard,
+          borderTopColor: theme.border,
+          paddingBottom: Math.max(insets.bottom + 16, 32)
+        }
+      ]}>
         {currentStep > Step.SELECT_MOUNTING && (
           <TouchableOpacity
             style={[styles.button, styles.backButton, { borderColor: theme.border }]}
             onPress={handlePrevStep}
           >
             <ArrowLeft size={20} color={theme.textPrimary} />
-            <Text style={[styles.buttonText, { color: theme.textPrimary }]}>Back</Text>
+            <Text style={[styles.buttonText, { color: theme.textPrimary }]}>{t('common.back')}</Text>
           </TouchableOpacity>
         )}
 
@@ -226,7 +244,7 @@ export default function CustomDesignScreen({ navigation }: any) {
               (currentStep === Step.SELECT_STONE && !canProceedToCustomize)
             }
           >
-            <Text style={[styles.buttonText, { color: '#fff' }]}>Next</Text>
+            <Text style={[styles.buttonText, { color: '#fff' }]}>{t('common.next')}</Text>
             <ArrowRight size={20} color="#fff" />
           </TouchableOpacity>
         ) : (
@@ -237,7 +255,7 @@ export default function CustomDesignScreen({ navigation }: any) {
           >
             <ShoppingCart size={20} color="#fff" />
             <Text style={[styles.buttonText, { color: '#fff' }]}>
-              {loading ? 'Adding...' : 'Add to Cart'}
+              {loading ? t('common.loading') : t('customDesign.addToCart')}
             </Text>
           </TouchableOpacity>
         )}

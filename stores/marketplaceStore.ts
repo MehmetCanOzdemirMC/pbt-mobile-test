@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { db } from '../config/firebase';
+import { db, auth } from '../config/firebase';
 import {
   collection,
   query,
@@ -103,6 +103,15 @@ export const useMarketplaceStore = create<MarketplaceState>((set, get) => ({
     set({ loading: true, error: null });
 
     try {
+      // AUTH CHECK: Only load if user is authenticated
+      if (!auth.currentUser) {
+        console.warn('⚠️ [MarketplaceStore] User not authenticated, skipping diamond load');
+        set({ loading: false, error: 'User not authenticated' });
+        return;
+      }
+
+      console.log('✅ [MarketplaceStore] Loading diamonds for user:', auth.currentUser.uid);
+
       // Query stones collection with LIMIT for better performance
       // Load first 200 stones (no orderBy to avoid index requirement)
       const stonesRef = collection(db, 'stones');

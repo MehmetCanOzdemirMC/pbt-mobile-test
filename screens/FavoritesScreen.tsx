@@ -9,10 +9,12 @@ import {
   Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { useFavoritesStore } from '../stores/favoritesStore';
 import { useTheme } from '../context/ThemeContext';
 
 export default function FavoritesScreen() {
+  const { t } = useTranslation();
   const navigation = useNavigation();
   const { theme } = useTheme();
   const { favorites, loading, loadFavorites, removeFromFavorites } = useFavoritesStore();
@@ -27,18 +29,18 @@ export default function FavoritesScreen() {
 
   const handleRemoveFavorite = async (stoneId: string) => {
     Alert.alert(
-      'Favorilerden Çıkar',
-      'Bu taşı favorilerden çıkarmak istediğinizden emin misiniz?',
+      t('favorites.removeTitle'),
+      t('favorites.removeConfirmation'),
       [
-        { text: 'İptal', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Çıkar',
+          text: t('favorites.remove'),
           style: 'destructive',
           onPress: async () => {
             try {
               await removeFromFavorites(stoneId);
             } catch (error) {
-              Alert.alert('Hata', 'Favorilerden çıkarılamadı');
+              Alert.alert(t('common.error'), t('favorites.removeFailed'));
             }
           },
         },
@@ -60,29 +62,29 @@ export default function FavoritesScreen() {
 
       <View style={styles.cardBody}>
         <View style={[styles.row, { borderBottomColor: theme.borderLight }]}>
-          <Text style={[styles.label, { color: theme.textSecondary }]}>Şekil:</Text>
+          <Text style={[styles.label, { color: theme.textSecondary }]}>{t('common.shape')}:</Text>
           <Text style={[styles.value, { color: theme.textPrimary }]}>{item.shape}</Text>
         </View>
 
         <View style={[styles.row, { borderBottomColor: theme.borderLight }]}>
-          <Text style={[styles.label, { color: theme.textSecondary }]}>Karat:</Text>
+          <Text style={[styles.label, { color: theme.textSecondary }]}>{t('common.carat')}:</Text>
           <Text style={[styles.value, { color: theme.textPrimary }]}>{item.carat.toFixed(2)} CT</Text>
         </View>
 
         <View style={[styles.row, { borderBottomColor: theme.borderLight }]}>
-          <Text style={[styles.label, { color: theme.textSecondary }]}>Renk:</Text>
+          <Text style={[styles.label, { color: theme.textSecondary }]}>{t('common.color')}:</Text>
           <Text style={[styles.value, { color: theme.textPrimary }]}>{item.color}</Text>
         </View>
 
         <View style={[styles.row, { borderBottomColor: theme.borderLight }]}>
-          <Text style={[styles.label, { color: theme.textSecondary }]}>Berraklık:</Text>
+          <Text style={[styles.label, { color: theme.textSecondary }]}>{t('common.clarity')}:</Text>
           <Text style={[styles.value, { color: theme.textPrimary }]}>{item.clarity}</Text>
         </View>
       </View>
 
       <View style={[styles.cardFooter, { backgroundColor: theme.background }]}>
         <View>
-          <Text style={[styles.priceLabel, { color: theme.textSecondary }]}>Toplam Fiyat</Text>
+          <Text style={[styles.priceLabel, { color: theme.textSecondary }]}>{t('common.totalPrice')}</Text>
           <Text style={[styles.price, { color: theme.primary }]}>${item.totalPrice.toLocaleString()}</Text>
         </View>
         <View style={styles.pricePerCaratContainer}>
@@ -97,7 +99,7 @@ export default function FavoritesScreen() {
     return (
       <View style={[styles.loadingContainer, { backgroundColor: theme.background }]}>
         <ActivityIndicator size="large" color={theme.primary} />
-        <Text style={[styles.loadingText, { color: theme.textSecondary }]}>Favoriler yükleniyor...</Text>
+        <Text style={[styles.loadingText, { color: theme.textSecondary }]}>{t('favorites.loading')}</Text>
       </View>
     );
   }
@@ -106,15 +108,15 @@ export default function FavoritesScreen() {
     return (
       <View style={[styles.emptyContainer, { backgroundColor: theme.background }]}>
         <Text style={styles.emptyIcon}>❤️</Text>
-        <Text style={[styles.emptyTitle, { color: theme.textPrimary }]}>Henüz favori taş yok</Text>
+        <Text style={[styles.emptyTitle, { color: theme.textPrimary }]}>{t('favorites.emptyTitle')}</Text>
         <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
-          Beğendiğiniz taşları favorilerinize ekleyin
+          {t('favorites.emptyMessage')}
         </Text>
         <TouchableOpacity
           style={[styles.browseButton, { backgroundColor: theme.primary }]}
           onPress={() => (navigation as any).navigate('Marketplace')}
         >
-          <Text style={styles.browseButtonText}>Taşlara Gözat</Text>
+          <Text style={styles.browseButtonText}>{t('favorites.browseDiamonds')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -123,8 +125,8 @@ export default function FavoritesScreen() {
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={[styles.header, { backgroundColor: theme.backgroundCard, borderBottomColor: theme.border }]}>
-        <Text style={[styles.headerTitle, { color: theme.textPrimary }]}>❤️ Favorilerim</Text>
-        <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>{favorites.length} taş</Text>
+        <Text style={[styles.headerTitle, { color: theme.textPrimary }]}>❤️ {t('favorites.title')}</Text>
+        <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>{favorites.length} {t('favorites.stonesCount')}</Text>
       </View>
 
       <FlatList

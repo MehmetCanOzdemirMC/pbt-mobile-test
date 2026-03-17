@@ -13,6 +13,8 @@ import {
   Image,
   ActivityIndicator,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../context/ThemeContext';
 import { Sparkles, ArrowRight } from 'lucide-react-native';
 import ScreenWrapper from '../components/ScreenWrapper';
@@ -72,6 +74,8 @@ const CATEGORY_ICONS: any = {
 
 export default function MountingsListScreen({ navigation }: any) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [mountings, setMountings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -191,7 +195,7 @@ export default function MountingsListScreen({ navigation }: any) {
             ${item.basePrice}
           </Text>
           <Text style={[styles.priceLabel, { color: theme.textSecondary }]}>
-            Base Price
+            {t('mountings.basePrice')}
           </Text>
         </View>
       </View>
@@ -207,7 +211,7 @@ export default function MountingsListScreen({ navigation }: any) {
         <View style={[styles.header, { backgroundColor: theme.backgroundCard }]}>
           <Sparkles size={24} color={theme.primary} />
           <Text style={[styles.headerTitle, { color: theme.textPrimary }]}>
-            Custom Mountings
+            {t('mountings.customMountings')}
           </Text>
         </View>
 
@@ -229,7 +233,7 @@ export default function MountingsListScreen({ navigation }: any) {
                 { color: !selectedCategory ? '#fff' : theme.textPrimary },
               ]}
             >
-              All
+              {t('mountings.all')}
             </Text>
           </TouchableOpacity>
 
@@ -252,7 +256,7 @@ export default function MountingsListScreen({ navigation }: any) {
                   { color: selectedCategory === cat ? '#fff' : theme.textPrimary },
                 ]}
               >
-                {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                {t(`mountings.${cat}`)}
               </Text>
             </TouchableOpacity>
           ))}
@@ -263,13 +267,13 @@ export default function MountingsListScreen({ navigation }: any) {
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={theme.primary} />
             <Text style={[styles.loadingText, { color: theme.textSecondary }]}>
-              Loading mountings...
+              {t('mountings.loading')}
             </Text>
           </View>
         ) : filteredMountings.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
-              No mountings available
+              {t('mountings.noMountings')}
             </Text>
           </View>
         ) : (
@@ -277,7 +281,7 @@ export default function MountingsListScreen({ navigation }: any) {
             data={filteredMountings}
             renderItem={renderMounting}
             keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.list}
+            contentContainerStyle={[styles.list, { paddingBottom: 16 + insets.bottom }]}
             showsVerticalScrollIndicator={false}
           />
         )}

@@ -14,6 +14,7 @@ import {
   Image,
   Dimensions,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
 import { ArrowLeft, Sparkles, DollarSign, Info } from 'lucide-react-native';
 import ScreenWrapper from '../components/ScreenWrapper';
@@ -24,6 +25,7 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function MountingDetailScreen({ route, navigation }: any) {
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
   const { mounting } = route.params;
 
   // State
@@ -47,7 +49,14 @@ export default function MountingDetailScreen({ route, navigation }: any) {
     <ScreenWrapper>
       <View style={[styles.container, { backgroundColor: theme.background }]}>
         {/* Header - Fixed */}
-        <View style={[styles.header, { backgroundColor: theme.backgroundCard, borderBottomColor: theme.border }]}>
+        <View style={[
+          styles.header,
+          {
+            backgroundColor: theme.backgroundCard,
+            borderBottomColor: theme.border,
+            paddingTop: insets.top > 0 ? insets.top : 16
+          }
+        ]}>
           <TouchableOpacity onPress={handleBack} style={styles.backButton}>
             <ArrowLeft size={24} color={theme.textPrimary} />
           </TouchableOpacity>
@@ -69,7 +78,7 @@ export default function MountingDetailScreen({ route, navigation }: any) {
         {/* Scrollable Content - Only below 3D viewer */}
         <ScrollView
           style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, { paddingTop: 16, paddingBottom: 150 + insets.bottom }]}
           showsVerticalScrollIndicator={false}
         >
           {/* Metal Selector */}
@@ -103,7 +112,7 @@ export default function MountingDetailScreen({ route, navigation }: any) {
             {/* Supplier Info */}
             {mounting.supplierName && (
               <View style={styles.supplierRow}>
-                <Text style={[styles.supplierLabel, { color: theme.textTertiary }]}>
+                <Text style={[styles.supplierLabel, { color: theme.textSecondary }]}>
                   Supplier:
                 </Text>
                 <Text style={[styles.supplierName, { color: theme.textPrimary }]}>
@@ -220,7 +229,14 @@ export default function MountingDetailScreen({ route, navigation }: any) {
         </ScrollView>
 
         {/* Bottom CTA */}
-        <View style={[styles.bottomBar, { backgroundColor: theme.backgroundCard, borderTopColor: theme.border }]}>
+        <View style={[
+          styles.bottomBar,
+          {
+            backgroundColor: theme.backgroundCard,
+            borderTopColor: theme.border,
+            paddingBottom: Math.max(insets.bottom, 16)
+          }
+        ]}>
           <View style={styles.bottomLeft}>
             <Text style={[styles.bottomPrice, { color: theme.primary }]}>
               ${mounting.basePrice + (mounting.settingFee || 0)}

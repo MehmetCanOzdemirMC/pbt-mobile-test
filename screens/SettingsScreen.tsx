@@ -8,13 +8,17 @@ import {
   Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { useSettingsStore, Language, Currency } from '../stores/settingsStore';
+import { useTranslation } from 'react-i18next';
+import { useSettingsStore, Currency } from '../stores/settingsStore';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage, Language } from '../context/LanguageContext';
 
 export default function SettingsScreen() {
   const navigation = useNavigation();
   const { theme } = useTheme();
-  const { language, currency, setLanguage, setCurrency, loadSettings } = useSettingsStore();
+  const { t } = useTranslation();
+  const { language, changeLanguage } = useLanguage();
+  const { currency, setCurrency, loadSettings } = useSettingsStore();
 
   useEffect(() => {
     loadSettings();
@@ -23,30 +27,32 @@ export default function SettingsScreen() {
   const languages: { value: Language; label: string; flag: string }[] = [
     { value: 'tr', label: 'Türkçe', flag: '🇹🇷' },
     { value: 'en', label: 'English', flag: '🇬🇧' },
+    { value: 'zh', label: '中文', flag: '🇨🇳' },
   ];
 
   const currencies: { value: Currency; label: string; symbol: string }[] = [
     { value: 'USD', label: 'US Dollar', symbol: '$' },
     { value: 'TRY', label: 'Turkish Lira', symbol: '₺' },
     { value: 'EUR', label: 'Euro', symbol: '€' },
+    { value: 'CNY', label: 'Chinese Yuan', symbol: '¥' },
   ];
 
   const handleLanguageChange = async (newLanguage: Language) => {
-    await setLanguage(newLanguage);
-    Alert.alert('Başarılı', 'Dil değiştirildi. Uygulamayı yeniden başlatmanız gerekebilir.');
+    await changeLanguage(newLanguage);
+    Alert.alert(t('common.success'), t('settings.languageChanged') || 'Language changed successfully');
   };
 
   const handleCurrencyChange = async (newCurrency: Currency) => {
     await setCurrency(newCurrency);
-    Alert.alert('Başarılı', 'Para birimi değiştirildi');
+    Alert.alert(t('common.success'), t('settings.currencyChanged') || 'Currency changed successfully');
   };
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: theme.background }]}>
       {/* Language Section */}
       <View style={[styles.section, { backgroundColor: theme.backgroundCard }]}>
-        <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>🌍 Dil / Language</Text>
-        <Text style={[styles.sectionSubtitle, { color: theme.textSecondary }]}>Uygulama dilini seçin</Text>
+        <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>🌍 {t('settings.language')}</Text>
+        <Text style={[styles.sectionSubtitle, { color: theme.textSecondary }]}>{t('settings.selectLanguage')}</Text>
 
         {languages.map((lang) => (
           <TouchableOpacity
@@ -77,9 +83,9 @@ export default function SettingsScreen() {
 
       {/* Currency Section */}
       <View style={[styles.section, { backgroundColor: theme.backgroundCard }]}>
-        <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>💱 Para Birimi / Currency</Text>
+        <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>💱 {t('settings.currency') || 'Currency'}</Text>
         <Text style={[styles.sectionSubtitle, { color: theme.textSecondary }]}>
-          Fiyatların gösterileceği para birimini seçin
+          {t('settings.selectCurrency') || 'Select currency for prices'}
         </Text>
 
         {currencies.map((curr) => (

@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { useCartStore } from '../stores/cartStore';
 import { useMessagingStore } from '../stores/messagingStore';
 import { auth, db } from '../config/firebase';
@@ -18,6 +19,7 @@ import ScreenWrapper from '../components/ScreenWrapper';
 import { useTheme } from '../context/ThemeContext';
 
 export default function CheckoutScreen() {
+  const { t } = useTranslation();
   const { theme } = useTheme();
   const navigation = useNavigation();
   const { items: cart, totalPrice: getTotalPrice, clearCart } = useCartStore();
@@ -30,27 +32,27 @@ export default function CheckoutScreen() {
 
   const handleCreateOrder = async () => {
     if (!deliveryAddress.trim()) {
-      Alert.alert('Hata', 'Lütfen teslimat adresi girin');
+      Alert.alert(t('checkout.error'), t('checkout.deliveryAddressRequired'));
       return;
     }
 
     if (cart.length === 0) {
-      Alert.alert('Hata', 'Sepetiniz boş');
+      Alert.alert(t('checkout.error'), t('checkout.cartEmpty'));
       return;
     }
 
     const user = auth.currentUser;
     if (!user) {
-      Alert.alert('Hata', 'Giriş yapmanız gerekiyor');
+      Alert.alert(t('checkout.error'), t('checkout.loginRequired'));
       return;
     }
 
     Alert.alert(
-      'Sipariş Onayı',
-      `Toplam ${cart.length} ürün için $${totalPrice.toLocaleString()} tutarında sipariş oluşturulacak. Onaylıyor musunuz?`,
+      t('checkout.orderConfirmation'),
+      t('checkout.confirmationMessage', { count: cart.length, total: totalPrice.toLocaleString() }),
       [
-        { text: 'İptal', style: 'cancel' },
-        { text: 'Onayla', onPress: () => createOrder() },
+        { text: t('checkout.cancel'), style: 'cancel' },
+        { text: t('checkout.confirm'), onPress: () => createOrder() },
       ]
     );
   };
@@ -80,7 +82,7 @@ export default function CheckoutScreen() {
         // Check if supplierId exists
         if (!item.supplierId || item.supplierId === '') {
           console.error('⚠️ HATA: Item supplierId boş!', item);
-          Alert.alert('Hata', `Taş ${item.stoneId} için tedarikçi bilgisi eksik. Lütfen bu taşı sepetten çıkarıp tekrar ekleyin.`);
+          Alert.alert(t('checkout.error'), t('checkout.supplierMissing', { stoneId: item.stoneId }));
           throw new Error('Supplier ID missing');
         }
 
@@ -214,8 +216,8 @@ export default function CheckoutScreen() {
       // Show warning if some stones couldn't be reserved
       if (unavailableStones.length > 0) {
         Alert.alert(
-          'Uyarı',
-          `Bazı taşlar artık mevcut değil ve siparişe eklenemedi:\n${unavailableStones.join(', ')}\n\nDiğer taşlar için sipariş oluşturuldu.`
+          t('checkout.warning'),
+          t('checkout.unavailableStones', { stones: unavailableStones.join(', ') })
         );
       }
 
@@ -301,7 +303,11 @@ export default function CheckoutScreen() {
           console.log('📤 Sending order message...');
           await sendMessageById(conversationId, {
             type: 'order',
-            body: `📦 Yeni sipariş oluşturuldu: ${orderData.orderId}\n\n${items.length} ürün\nToplam: $${orderTotal.toLocaleString()}`,
+            body: t('checkout.orderMessage', {
+              orderId: orderData.orderId,
+              count: items.length,
+              total: orderTotal.toLocaleString()
+            }),
             metadata: {
               orderId: orderData.orderId,
               orderStatus: 'NEGOTIATING',
@@ -330,11 +336,11 @@ export default function CheckoutScreen() {
       const firstConversationId = conversationIds[0];
 
       Alert.alert(
-        'Başarılı! 🎉',
-        `Siparişiniz oluşturuldu.\n\n${results.length} sipariş oluşturuldu.\n\nTedarikçi ile görüşmek için mesajlaşma ekranına yönlendiriliyorsunuz.`,
+        t('checkout.successTitle'),
+        t('checkout.successMessage', { count: results.length }),
         [
           {
-            text: 'Mesajlaşmaya Git',
+            text: t('checkout.goToChat'),
             onPress: () => {
               if (firstConversationId) {
                 navigation.navigate('Conversation' as never, { conversationId: firstConversationId } as never);
@@ -343,12 +349,12 @@ export default function CheckoutScreen() {
               }
             }
           },
-          { text: 'Ana Sayfa', onPress: () => navigation.navigate('MainTabs' as never), style: 'cancel' },
+          { text: t('checkout.goToHome'), onPress: () => navigation.navigate('MainTabs' as never), style: 'cancel' },
         ]
       );
     } catch (error: any) {
       console.error('Order creation error:', error);
-      Alert.alert('Hata', error.message || 'Sipariş oluşturulamadı');
+      Alert.alert(t('checkout.error'), error.message || t('checkout.orderFailed'));
     } finally {
       setLoading(false);
     }
@@ -358,13 +364,13 @@ export default function CheckoutScreen() {
     return (
       <View style={[styles.emptyContainer, { backgroundColor: theme.background }]}>
         <Text style={styles.emptyIcon}>🛒</Text>
-        <Text style={[styles.emptyTitle, { color: theme.textPrimary }]}>Sepetiniz Boş</Text>
-        <Text style={[styles.emptyText, { color: theme.textSecondary }]}>Önce sepete ürün ekleyin</Text>
+        <Text style={[styles.emptyTitle, { color: theme.textPrimary }]}>{t('checkout.emptyCartTitle')}</Text>
+        <Text style={[styles.emptyText, { color: theme.textSecondary }]}>{t('checkout.emptyCartMessage')}</Text>
         <TouchableOpacity
           style={[styles.backButton, { backgroundColor: theme.primary }]}
           onPress={() => navigation.goBack()}
         >
-          <Text style={styles.backButtonText}>Geri Dön</Text>
+          <Text style={styles.backButtonText}>{t('checkout.goBack')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -376,20 +382,20 @@ export default function CheckoutScreen() {
         <ScrollView style={styles.scrollView}>
         {/* Order Summary */}
         <View style={[styles.section, { borderBottomColor: theme.borderLight }]}>
-          <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Sipariş Özeti</Text>
+          <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>{t('checkout.orderSummary')}</Text>
           <View style={[styles.summaryBox, { backgroundColor: theme.backgroundCard }]}>
             <View style={[styles.summaryRow, { borderBottomColor: theme.border }]}>
-              <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>Ürün Sayısı:</Text>
-              <Text style={[styles.summaryValue, { color: theme.textPrimary }]}>{cart.length} adet</Text>
+              <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>{t('checkout.itemCount')}:</Text>
+              <Text style={[styles.summaryValue, { color: theme.textPrimary }]}>{t('checkout.pieces', { count: cart.length })}</Text>
             </View>
             <View style={[styles.summaryRow, { borderBottomColor: theme.border }]}>
-              <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>Toplam Karat:</Text>
+              <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>{t('checkout.totalCarat')}:</Text>
               <Text style={[styles.summaryValue, { color: theme.textPrimary }]}>
                 {cart.reduce((sum, item) => sum + item.carat, 0).toFixed(2)} CT
               </Text>
             </View>
             <View style={[styles.summaryRow, styles.summaryRowTotal]}>
-              <Text style={[styles.summaryLabelTotal, { color: theme.textPrimary }]}>Toplam Tutar:</Text>
+              <Text style={[styles.summaryLabelTotal, { color: theme.textPrimary }]}>{t('checkout.totalAmount')}:</Text>
               <Text style={[styles.summaryValueTotal, { color: theme.primary }]}>${totalPrice.toLocaleString()}</Text>
             </View>
           </View>
@@ -397,7 +403,7 @@ export default function CheckoutScreen() {
 
         {/* Items List */}
         <View style={[styles.section, { borderBottomColor: theme.borderLight }]}>
-          <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Ürünler ({cart.length})</Text>
+          <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>{t('checkout.items', { count: cart.length })}</Text>
           {cart.map((item) => (
             <View key={item.id} style={[styles.itemCard, { backgroundColor: theme.backgroundCard }]}>
               <View style={styles.itemHeader}>
@@ -413,10 +419,10 @@ export default function CheckoutScreen() {
 
         {/* Delivery Address */}
         <View style={[styles.section, { borderBottomColor: theme.borderLight }]}>
-          <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Teslimat Adresi *</Text>
+          <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>{t('checkout.deliveryAddress')} *</Text>
           <TextInput
             style={[styles.textArea, { backgroundColor: theme.backgroundCard, borderColor: theme.border, color: theme.textPrimary }]}
-            placeholder="Tam adresinizi yazın..."
+            placeholder={t('checkout.deliveryAddressPlaceholder')}
             placeholderTextColor={theme.textDim}
             value={deliveryAddress}
             onChangeText={setDeliveryAddress}
@@ -428,10 +434,10 @@ export default function CheckoutScreen() {
 
         {/* Notes */}
         <View style={[styles.section, { borderBottomColor: theme.borderLight }]}>
-          <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Notlar (Opsiyonel)</Text>
+          <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>{t('checkout.notes')}</Text>
           <TextInput
             style={[styles.textArea, { backgroundColor: theme.backgroundCard, borderColor: theme.border, color: theme.textPrimary }]}
-            placeholder="Tedarikçiye notunuz..."
+            placeholder={t('checkout.notesPlaceholder')}
             placeholderTextColor={theme.textDim}
             value={notes}
             onChangeText={setNotes}
@@ -447,7 +453,7 @@ export default function CheckoutScreen() {
       {/* Bottom Bar */}
       <View style={[styles.bottomBar, { borderTopColor: theme.borderLight, backgroundColor: theme.backgroundCard }]}>
         <View style={styles.totalContainer}>
-          <Text style={[styles.totalLabel, { color: theme.textSecondary }]}>Toplam</Text>
+          <Text style={[styles.totalLabel, { color: theme.textSecondary }]}>{t('checkout.total')}</Text>
           <Text style={[styles.totalValue, { color: theme.textPrimary }]}>${totalPrice.toLocaleString()}</Text>
         </View>
         <TouchableOpacity
@@ -458,7 +464,7 @@ export default function CheckoutScreen() {
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.orderButtonText}>Sipariş Oluştur</Text>
+            <Text style={styles.orderButtonText}>{t('checkout.createOrder')}</Text>
           )}
         </TouchableOpacity>
       </View>

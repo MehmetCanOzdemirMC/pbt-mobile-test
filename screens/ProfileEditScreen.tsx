@@ -17,11 +17,13 @@ import { updatePassword, updateEmail, EmailAuthProvider, reauthenticateWithCrede
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import * as ImagePicker from 'expo-image-picker';
 import { Moon, Sun } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { auth, db, storage } from '../config/firebase';
 import { useTheme } from '../context/ThemeContext';
 import ScreenWrapper from '../components/ScreenWrapper';
 
 export default function ProfileEditScreen() {
+  const { t } = useTranslation();
   const navigation = useNavigation();
   const { theme, isDark, toggleTheme } = useTheme();
   const user = auth.currentUser;
@@ -60,7 +62,7 @@ export default function ProfileEditScreen() {
       }
     } catch (error) {
       console.error('Error loading user data:', error);
-      Alert.alert('Hata', 'Profil bilgileri yüklenemedi');
+      Alert.alert(t('profile.error'), t('profile.loadError'));
     } finally {
       setLoading(false);
     }
@@ -68,7 +70,7 @@ export default function ProfileEditScreen() {
 
   const handleSaveProfile = async () => {
     if (!name.trim()) {
-      Alert.alert('Hata', 'İsim alanı boş bırakılamaz');
+      Alert.alert(t('profile.error'), t('profile.nameRequired'));
       return;
     }
 
@@ -83,12 +85,12 @@ export default function ProfileEditScreen() {
         companyName: companyName.trim(),
       });
 
-      Alert.alert('Başarılı', 'Profil bilgileriniz güncellendi', [
-        { text: 'Tamam', onPress: () => navigation.goBack() },
+      Alert.alert(t('profile.success'), t('profile.profileUpdated'), [
+        { text: t('profile.ok'), onPress: () => navigation.goBack() },
       ]);
     } catch (error: any) {
       console.error('Error saving profile:', error);
-      Alert.alert('Hata', 'Profil güncellenirken bir hata oluştu');
+      Alert.alert(t('profile.error'), t('profile.updateError'));
     } finally {
       setSaving(false);
     }
@@ -96,17 +98,17 @@ export default function ProfileEditScreen() {
 
   const handleChangePassword = async () => {
     if (!currentPassword || !newPassword || !confirmPassword) {
-      Alert.alert('Hata', 'Tüm şifre alanlarını doldurun');
+      Alert.alert(t('profile.error'), t('profile.fillAllPasswordFields'));
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      Alert.alert('Hata', 'Yeni şifreler eşleşmiyor');
+      Alert.alert(t('profile.error'), t('profile.passwordMismatch'));
       return;
     }
 
     if (newPassword.length < 6) {
-      Alert.alert('Hata', 'Yeni şifre en az 6 karakter olmalı');
+      Alert.alert(t('profile.error'), t('profile.passwordMinLength'));
       return;
     }
 
@@ -121,9 +123,9 @@ export default function ProfileEditScreen() {
       // Change password
       await updatePassword(user, newPassword);
 
-      Alert.alert('Başarılı', 'Şifreniz değiştirildi', [
+      Alert.alert(t('profile.success'), t('profile.passwordChanged'), [
         {
-          text: 'Tamam',
+          text: t('profile.ok'),
           onPress: () => {
             setCurrentPassword('');
             setNewPassword('');
@@ -134,11 +136,11 @@ export default function ProfileEditScreen() {
     } catch (error: any) {
       console.error('Error changing password:', error);
       if (error.code === 'auth/wrong-password') {
-        Alert.alert('Hata', 'Mevcut şifre yanlış');
+        Alert.alert(t('profile.error'), t('profile.wrongPassword'));
       } else if (error.code === 'auth/weak-password') {
-        Alert.alert('Hata', 'Şifre çok zayıf');
+        Alert.alert(t('profile.error'), t('profile.weakPassword'));
       } else {
-        Alert.alert('Hata', 'Şifre değiştirilirken bir hata oluştu');
+        Alert.alert(t('profile.error'), t('profile.passwordChangeError'));
       }
     } finally {
       setSaving(false);
@@ -150,7 +152,7 @@ export default function ProfileEditScreen() {
       // Request permission
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('İzin Gerekli', 'Galeriye erişim izni gereklidir.');
+        Alert.alert(t('profile.permissionRequired'), t('profile.galleryPermissionMessage'));
         return;
       }
 
@@ -168,7 +170,7 @@ export default function ProfileEditScreen() {
       }
     } catch (error) {
       console.error('Error picking image:', error);
-      Alert.alert('Hata', 'Resim seçilirken hata oluştu');
+      Alert.alert(t('profile.error'), t('profile.imagePickError'));
     }
   };
 
@@ -199,10 +201,10 @@ export default function ProfileEditScreen() {
       // Update local state
       setPhotoURL(downloadURL);
 
-      Alert.alert('Başarılı', 'Profil fotoğrafınız güncellendi');
+      Alert.alert(t('profile.success'), t('profile.photoUpdated'));
     } catch (error: any) {
       console.error('Error uploading photo:', error);
-      Alert.alert('Hata', 'Fotoğraf yüklenirken hata oluştu');
+      Alert.alert(t('profile.error'), t('profile.photoUploadError'));
     } finally {
       setUploading(false);
     }
@@ -212,7 +214,7 @@ export default function ProfileEditScreen() {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#007AFF" />
-        <Text style={styles.loadingText}>Yükleniyor...</Text>
+        <Text style={styles.loadingText}>{t('profile.loading')}</Text>
       </View>
     );
   }
@@ -222,7 +224,7 @@ export default function ProfileEditScreen() {
       <ScrollView style={styles.container}>
       {/* Profile Photo Section */}
       <View style={styles.photoSection}>
-        <Text style={styles.sectionTitle}>📷 Profil Fotoğrafı</Text>
+        <Text style={styles.sectionTitle}>📷 {t('profile.profilePhoto')}</Text>
 
         <View style={styles.photoContainer}>
           {photoURL ? (
@@ -245,7 +247,7 @@ export default function ProfileEditScreen() {
           disabled={uploading}
         >
           <Text style={styles.uploadButtonText}>
-            {uploading ? '📤 Yükleniyor...' : '📷 Fotoğraf Seç'}
+            {uploading ? `📤 ${t('profile.uploading')}` : `📷 ${t('profile.selectPhoto')}`}
           </Text>
         </TouchableOpacity>
 
@@ -263,17 +265,17 @@ export default function ProfileEditScreen() {
             <Sun size={20} color={theme.textPrimary} />
           )}
           <Text style={[styles.sectionTitle, { color: theme.textPrimary, marginLeft: 8 }]}>
-            🎨 Tema
+            🎨 {t('profile.theme')}
           </Text>
         </View>
 
         <View style={styles.themeRow}>
           <View>
             <Text style={[styles.themeLabel, { color: theme.textPrimary }]}>
-              {isDark ? 'Koyu Mod' : 'Açık Mod'}
+              {isDark ? t('profile.darkMode') : t('profile.lightMode')}
             </Text>
             <Text style={[styles.themeSubtext, { color: theme.textSecondary }]}>
-              {isDark ? 'Gözlerinizi koruyan koyu tema' : 'Parlak ve canlı aydınlık tema'}
+              {isDark ? t('profile.darkModeDesc') : t('profile.lightModeDesc')}
             </Text>
           </View>
           <Switch
@@ -287,41 +289,41 @@ export default function ProfileEditScreen() {
 
       {/* Profile Info Section */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>👤 Kişisel Bilgiler</Text>
+        <Text style={styles.sectionTitle}>👤 {t('profile.personalInfo')}</Text>
 
-        <Text style={styles.label}>İsim *</Text>
+        <Text style={styles.label}>{t('profile.name')} *</Text>
         <TextInput
           style={styles.input}
           value={name}
           onChangeText={setName}
-          placeholder="İsminizi girin"
+          placeholder={t('profile.namePlaceholder')}
           autoCapitalize="words"
         />
 
-        <Text style={styles.label}>Soyisim</Text>
+        <Text style={styles.label}>{t('profile.surname')}</Text>
         <TextInput
           style={styles.input}
           value={surname}
           onChangeText={setSurname}
-          placeholder="Soyisminizi girin"
+          placeholder={t('profile.surnamePlaceholder')}
           autoCapitalize="words"
         />
 
-        <Text style={styles.label}>Telefon</Text>
+        <Text style={styles.label}>{t('profile.phone')}</Text>
         <TextInput
           style={styles.input}
           value={phone}
           onChangeText={setPhone}
-          placeholder="+90 555 123 4567"
+          placeholder={t('profile.phonePlaceholder')}
           keyboardType="phone-pad"
         />
 
-        <Text style={styles.label}>Firma Adı</Text>
+        <Text style={styles.label}>{t('profile.companyName')}</Text>
         <TextInput
           style={styles.input}
           value={companyName}
           onChangeText={setCompanyName}
-          placeholder="Firma adınızı girin"
+          placeholder={t('profile.companyNamePlaceholder')}
         />
 
         <TouchableOpacity
@@ -330,41 +332,41 @@ export default function ProfileEditScreen() {
           disabled={saving}
         >
           <Text style={styles.saveButtonText}>
-            {saving ? 'Kaydediliyor...' : '💾 Bilgileri Kaydet'}
+            {saving ? t('profile.saving') : `💾 ${t('profile.saveInfo')}`}
           </Text>
         </TouchableOpacity>
       </View>
 
       {/* Password Change Section */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>🔒 Şifre Değiştir</Text>
+        <Text style={styles.sectionTitle}>🔒 {t('profile.changePassword')}</Text>
 
-        <Text style={styles.label}>Mevcut Şifre</Text>
+        <Text style={styles.label}>{t('profile.currentPassword')}</Text>
         <TextInput
           style={styles.input}
           value={currentPassword}
           onChangeText={setCurrentPassword}
-          placeholder="Mevcut şifrenizi girin"
+          placeholder={t('profile.currentPasswordPlaceholder')}
           secureTextEntry
           autoCapitalize="none"
         />
 
-        <Text style={styles.label}>Yeni Şifre</Text>
+        <Text style={styles.label}>{t('profile.newPassword')}</Text>
         <TextInput
           style={styles.input}
           value={newPassword}
           onChangeText={setNewPassword}
-          placeholder="Yeni şifrenizi girin"
+          placeholder={t('profile.newPasswordPlaceholder')}
           secureTextEntry
           autoCapitalize="none"
         />
 
-        <Text style={styles.label}>Yeni Şifre (Tekrar)</Text>
+        <Text style={styles.label}>{t('profile.confirmPassword')}</Text>
         <TextInput
           style={styles.input}
           value={confirmPassword}
           onChangeText={setConfirmPassword}
-          placeholder="Yeni şifrenizi tekrar girin"
+          placeholder={t('profile.confirmPasswordPlaceholder')}
           secureTextEntry
           autoCapitalize="none"
         />
@@ -375,7 +377,7 @@ export default function ProfileEditScreen() {
           disabled={saving}
         >
           <Text style={styles.changePasswordButtonText}>
-            {saving ? 'Değiştiriliyor...' : '🔑 Şifreyi Değiştir'}
+            {saving ? t('profile.changing') : `🔑 ${t('profile.changePasswordButton')}`}
           </Text>
         </TouchableOpacity>
       </View>

@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   ScrollView
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Package } from 'lucide-react-native';
 
 // Mock mountings (replace with real Firestore data)
@@ -30,11 +31,13 @@ interface Props {
 }
 
 export default function MountingSelectorStep({ selectedMounting, onSelect, theme }: Props) {
+  const { t } = useTranslation();
+
   return (
     <View style={styles.container}>
-      <Text style={[styles.title, { color: theme.textPrimary }]}>Choose a Mounting</Text>
+      <Text style={[styles.title, { color: theme.textPrimary }]}>{t('customDesign.chooseMounting')}</Text>
       <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-        Select the base design for your custom jewelry
+        {t('customDesign.selectBaseDesign') || 'Select the base design for your custom jewelry'}
       </Text>
 
       <ScrollView style={styles.list} contentContainerStyle={styles.listContent}>

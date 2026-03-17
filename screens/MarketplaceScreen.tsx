@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { Heart, Check, Clock, SlidersHorizontal } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { useCartStore } from '../stores/cartStore';
 import { useFavoritesStore } from '../stores/favoritesStore';
 import { useCompareStore } from '../stores/compareStore';
@@ -51,6 +52,7 @@ interface Stone {
 
 export default function MarketplaceScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const [refreshing, setRefreshing] = useState(false);
   const [selectedStone, setSelectedStone] = useState<Stone | null>(null);
@@ -183,7 +185,7 @@ export default function MarketplaceScreen() {
 
   const handleAddToCart = async (stone: Stone) => {
     if (stone.availability !== 'available') {
-      Alert.alert('Uyarı', 'Bu taş müsait değil');
+      Alert.alert(t('common.error'), t('marketplace.notAvailable'));
       return;
     }
 
@@ -204,9 +206,9 @@ export default function MarketplaceScreen() {
         supplierName: stone.supplierName,
         addedAt: Date.now(),
       });
-      Alert.alert('Başarılı', 'Taş sepete eklendi');
+      Alert.alert(t('common.success'), t('marketplace.addToCartSuccess'));
     } catch (error) {
-      Alert.alert('Hata', 'Sepete eklenirken bir hata oluştu');
+      Alert.alert(t('common.error'), t('marketplace.addToCartError'));
     }
   };
 
@@ -230,7 +232,7 @@ export default function MarketplaceScreen() {
         });
       }
     } catch (error) {
-      Alert.alert('Hata', 'Favori işlemi başarısız');
+      Alert.alert(t('common.error'), t('marketplace.favoriteError'));
     }
   };
 
@@ -267,7 +269,7 @@ export default function MarketplaceScreen() {
               styles.availabilityText,
               { color: item.availability === 'available' ? theme.success : theme.warning }
             ]}>
-              {item.availability === 'available' ? 'Mevcut' : 'Rezerve'}
+              {item.availability === 'available' ? t('marketplace.available') : t('marketplace.reserved')}
             </Text>
           </View>
         </View>
@@ -275,28 +277,28 @@ export default function MarketplaceScreen() {
 
       <View style={styles.cardBody}>
         <View style={[styles.row, { borderBottomColor: theme.borderLight }]}>
-          <Text style={[styles.label, { color: theme.textSecondary }]}>Şekil:</Text>
+          <Text style={[styles.label, { color: theme.textSecondary }]}>{t('marketplace.shape')}:</Text>
           <Text style={[styles.value, { color: theme.textPrimary }]}>{item.shape}</Text>
         </View>
 
         <View style={[styles.row, { borderBottomColor: theme.borderLight }]}>
-          <Text style={[styles.label, { color: theme.textSecondary }]}>Karat:</Text>
+          <Text style={[styles.label, { color: theme.textSecondary }]}>{t('marketplace.carat')}:</Text>
           <Text style={[styles.value, { color: theme.textPrimary }]}>{item.carat.toFixed(2)} CT</Text>
         </View>
 
         <View style={[styles.row, { borderBottomColor: theme.borderLight }]}>
-          <Text style={[styles.label, { color: theme.textSecondary }]}>Renk:</Text>
+          <Text style={[styles.label, { color: theme.textSecondary }]}>{t('marketplace.color')}:</Text>
           <Text style={[styles.value, { color: theme.textPrimary }]}>{item.color}</Text>
         </View>
 
         <View style={[styles.row, { borderBottomColor: theme.borderLight }]}>
-          <Text style={[styles.label, { color: theme.textSecondary }]}>Berraklık:</Text>
+          <Text style={[styles.label, { color: theme.textSecondary }]}>{t('marketplace.clarity')}:</Text>
           <Text style={[styles.value, { color: theme.textPrimary }]}>{item.clarity}</Text>
         </View>
 
         {item.cut && (
           <View style={[styles.row, { borderBottomColor: theme.borderLight }]}>
-            <Text style={[styles.label, { color: theme.textSecondary }]}>Kesim:</Text>
+            <Text style={[styles.label, { color: theme.textSecondary }]}>{t('marketplace.cut')}:</Text>
             <Text style={[styles.value, { color: theme.textPrimary }]}>{item.cut}</Text>
           </View>
         )}
@@ -304,7 +306,7 @@ export default function MarketplaceScreen() {
 
       <View style={[styles.cardFooter, { backgroundColor: theme.background }]}>
         <View>
-          <Text style={[styles.priceLabel, { color: theme.textSecondary }]}>Toplam Fiyat</Text>
+          <Text style={[styles.priceLabel, { color: theme.textSecondary }]}>{t('marketplace.totalPrice')}</Text>
           <Text style={[styles.price, { color: theme.primary }]}>${item.totalPrice.toLocaleString()}</Text>
         </View>
         <View style={styles.pricePerCaratContainer}>
@@ -323,7 +325,7 @@ export default function MarketplaceScreen() {
         disabled={Boolean(item.availability !== 'available')}
       >
         <Text style={styles.addToCartButtonText}>
-          {item.availability === 'available' ? '🛒 Sepete Ekle' : '⏳ Müsait Değil'}
+          {item.availability === 'available' ? `🛒 ${t('marketplace.addToCart')}` : `⏳ ${t('marketplace.notAvailableButton')}`}
         </Text>
       </TouchableOpacity>
     </TouchableOpacity>
@@ -333,7 +335,7 @@ export default function MarketplaceScreen() {
     return (
       <View style={[styles.loadingContainer, { backgroundColor: theme.background }]}>
         <ActivityIndicator size="large" color={theme.primary} />
-        <Text style={[styles.loadingText, { color: theme.textSecondary }]}>Taşlar yükleniyor...</Text>
+        <Text style={[styles.loadingText, { color: theme.textSecondary }]}>{t('marketplace.loading')}</Text>
       </View>
     );
   }
@@ -344,7 +346,7 @@ export default function MarketplaceScreen() {
       <View style={[styles.searchContainer, { backgroundColor: theme.backgroundCard, borderBottomColor: theme.border }]}>
         <TextInput
           style={[styles.searchInput, { backgroundColor: theme.background, color: theme.textPrimary }]}
-          placeholder="Stock ID veya Tedarikçi Ara..."
+          placeholder={t('marketplace.searchPlaceholderStockId')}
           placeholderTextColor={theme.textDim}
           value={searchQuery}
           onChangeText={setSearchQuery}
@@ -359,10 +361,10 @@ export default function MarketplaceScreen() {
 
       <View style={[styles.statsBar, { backgroundColor: theme.backgroundCard, borderBottomColor: theme.border }]}>
         <Text style={[styles.statsText, { color: theme.textSecondary }]}>
-          📊 Toplam {allStones.length} Taş ({stones.length} gösteriliyor)
+          📊 {t('marketplace.total', { count: allStones.length, showing: stones.length })}
         </Text>
         <Text style={[styles.statsText, { color: theme.textSecondary }]}>
-          ✓ {allStones.filter(s => s.availability === 'available').length} Mevcut
+          ✓ {t('marketplace.availableCount', { count: allStones.filter(s => s.availability === 'available').length })}
         </Text>
       </View>
 
@@ -376,7 +378,7 @@ export default function MarketplaceScreen() {
         }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Text style={[styles.emptyText, { color: theme.textDim }]}>Henüz taş bulunmuyor</Text>
+            <Text style={[styles.emptyText, { color: theme.textDim }]}>{t('marketplace.emptyMessage')}</Text>
           </View>
         }
       />

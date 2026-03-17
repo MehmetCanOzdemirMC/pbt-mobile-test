@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   ScrollView
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { WebView } from 'react-native-webview';
 import { Palette } from 'lucide-react-native';
 
@@ -38,11 +39,12 @@ export default function CustomizerStep({
   onMetalChange,
   theme
 }: Props) {
+  const { t } = useTranslation();
   const totalPrice = (mounting?.basePrice || 0) + (stone?.totalPrice || 0);
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={[styles.title, { color: theme.textPrimary }]}>Customize Your Design</Text>
+      <Text style={[styles.title, { color: theme.textPrimary }]}>{t('customDesign.customizeDesign')}</Text>
 
       {/* 3D Viewer Placeholder (WebView for iJewel) */}
       <View style={[styles.viewerContainer, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
@@ -64,7 +66,7 @@ export default function CustomizerStep({
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Palette size={20} color={theme.primary} />
-          <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Select Metal</Text>
+          <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>{t('customDesign.selectMetal')}</Text>
         </View>
 
         <View style={styles.metalGrid}>
@@ -92,17 +94,17 @@ export default function CustomizerStep({
 
       {/* Price Summary */}
       <View style={[styles.summaryCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
-        <Text style={[styles.summaryTitle, { color: theme.textPrimary }]}>Price Summary</Text>
+        <Text style={[styles.summaryTitle, { color: theme.textPrimary }]}>{t('customDesign.priceSummary')}</Text>
 
         <View style={styles.summaryRow}>
-          <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>Mounting:</Text>
+          <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>{t('customDesign.mounting')}:</Text>
           <Text style={[styles.summaryValue, { color: theme.textPrimary }]}>
             ${(mounting?.basePrice || 0).toLocaleString()}
           </Text>
         </View>
 
         <View style={styles.summaryRow}>
-          <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>Stone:</Text>
+          <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>{t('customDesign.stone')}:</Text>
           <Text style={[styles.summaryValue, { color: theme.textPrimary }]}>
             ${(stone?.totalPrice || 0).toLocaleString()}
           </Text>
@@ -110,7 +112,7 @@ export default function CustomizerStep({
 
         <View style={[styles.summaryRow, styles.summaryTotal]}>
           <Text style={[styles.summaryLabel, styles.totalLabel, { color: theme.textPrimary }]}>
-            Total:
+            {t('cart.total')}:
           </Text>
           <Text style={[styles.summaryValue, styles.totalValue, { color: theme.primary }]}>
             ${totalPrice.toLocaleString()}

@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { useNavigation } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { auth, db } from '../../config/firebase';
 import { useTheme } from '../../context/ThemeContext';
 
@@ -31,6 +32,7 @@ interface Order {
  */
 export default function SalesScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -94,17 +96,17 @@ export default function SalesScreen() {
   const getStatusText = (status: string) => {
     switch (status) {
       case 'PENDING_OFFER':
-        return 'Teklif Bekliyor';
+        return t('orderDetail.status.pendingOffer');
       case 'PENDING_PAYMENT':
-        return 'Ödeme Bekliyor';
+        return t('orderDetail.status.pendingPayment');
       case 'PAYMENT_CLAIMED':
-        return 'Ödeme Bildirimi';
+        return t('orderDetail.status.paymentClaimed');
       case 'COMPLETED':
-        return 'Tamamlandı';
+        return t('orderDetail.status.completed');
       case 'CANCELLED_BY_SUPPLIER':
-        return 'İptal (Tedarikçi)';
+        return t('orderDetail.status.cancelledSupplier');
       case 'CANCELLED_BY_BUYER':
-        return 'İptal (Alıcı)';
+        return t('orderDetail.status.cancelledBuyer');
       default:
         return status;
     }
@@ -132,7 +134,7 @@ export default function SalesScreen() {
 
         <View style={styles.itemsContainer}>
           <Text style={[styles.itemsText, { color: theme.textDim }]}>
-            {item.items?.length || 0} taş
+            {item.items?.length || 0} {t('sales.stones')}
           </Text>
         </View>
 
@@ -166,8 +168,8 @@ export default function SalesScreen() {
         }
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Text style={[styles.emptyText, { color: theme.textDim }]}>Henüz sipariş yok</Text>
-            <Text style={[styles.emptySubtext, { color: theme.textDim }]}>Gelen siparişler burada görünecek</Text>
+            <Text style={[styles.emptyText, { color: theme.textDim }]}>{t('sales.emptyTitle')}</Text>
+            <Text style={[styles.emptySubtext, { color: theme.textDim }]}>{t('sales.emptySubtext')}</Text>
           </View>
         }
       />

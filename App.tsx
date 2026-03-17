@@ -37,9 +37,12 @@ import SupplierDashboardScreen from './screens/SupplierDashboardScreen';
 import { useCartStore } from './stores/cartStore';
 import { useMessagingStore } from './stores/messagingStore';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
+import { LanguageProvider } from './context/LanguageContext';
+import { useTranslation } from 'react-i18next';
 import { useFonts } from './hooks/useFonts';
-import { Home, Diamond, ShoppingCart, BarChart3, MessageCircle, Package, User } from 'lucide-react-native';
+import { Home, Diamond, ShoppingCart, BarChart3, MessageCircle, Package, User, Shield } from 'lucide-react-native';
 import FloatingCalculatorButton from './components/FloatingCalculatorButton';
+import { isSupplierRole, isAdminRole, isRetailerRole, normalizeRole } from './constants/roles';
 
 // New Screens (Port from Web)
 import AnalyticsScreen from './screens/AnalyticsScreen';
@@ -53,8 +56,56 @@ import MountingDetailScreen from './screens/MountingDetailScreen';
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
+// Login Form Component (with translations)
+function LoginForm({ email, setEmail, password, setPassword, handleLogin, loading }: any) {
+  const { t } = useTranslation();
+
+  return (
+    <View style={styles.loginContainer}>
+      <Text style={styles.logo}>💎 {t('common.appName')}</Text>
+      <Text style={styles.subtitle}>{t('auth.pleaseLogin')}</Text>
+
+      <TextInput
+        style={styles.input}
+        placeholder={t('auth.email')}
+        value={email}
+        onChangeText={setEmail}
+        autoCapitalize="none"
+        keyboardType="email-address"
+        editable={!loading}
+      />
+
+      <TextInput
+        style={styles.input}
+        placeholder={t('auth.password')}
+        value={password}
+        onChangeText={setPassword}
+        secureTextEntry
+        editable={!loading}
+      />
+
+      <TouchableOpacity
+        style={[styles.button, loading && styles.buttonDisabled]}
+        onPress={handleLogin}
+        disabled={loading}
+      >
+        {loading ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text style={styles.buttonText}>{t('auth.login')}</Text>
+        )}
+      </TouchableOpacity>
+
+      <Text style={styles.note}>
+        ℹ️ {t('auth.testWithExistingAccount') || 'Test with your existing account'}
+      </Text>
+    </View>
+  );
+}
+
 // App wrapper with notifications
 function AppWithNotifications() {
+  const { t } = useTranslation();
   // useNotifications(); // Disabled for Expo Go (requires development build)
 
   return (
@@ -68,64 +119,64 @@ function AppWithNotifications() {
         name="Conversation"
         component={ConversationScreen}
         options={{
-          title: 'Sohbet',
-          headerBackTitle: 'Geri'
+          title: t('messages.title'),
+          headerBackTitle: t('common.back')
         }}
       />
       <Stack.Screen
         name="DiamondDetail"
         component={DiamondDetailScreen}
         options={{
-          title: 'Taş Detayı',
-          headerBackTitle: 'Geri'
+          title: t('stoneDetail.title'),
+          headerBackTitle: t('common.back')
         }}
       />
       <Stack.Screen
         name="Checkout"
         component={CheckoutScreen}
         options={{
-          title: 'Sipariş Oluştur',
-          headerBackTitle: 'Geri'
+          title: t('cart.checkout'),
+          headerBackTitle: t('common.back')
         }}
       />
       <Stack.Screen
         name="OrderDetail"
         component={OrderDetailScreen}
         options={{
-          title: 'Sipariş Detayı',
-          headerBackTitle: 'Geri'
+          title: t('orders.orderDetails'),
+          headerBackTitle: t('common.back')
         }}
       />
       <Stack.Screen
         name="ProfileEdit"
         component={ProfileEditScreen}
         options={{
-          title: 'Profil Düzenle',
-          headerBackTitle: 'Geri'
+          title: t('profile.editProfile'),
+          headerBackTitle: t('common.back')
         }}
       />
       <Stack.Screen
         name="Favorites"
         component={FavoritesScreen}
         options={{
-          title: 'Favorilerim',
-          headerBackTitle: 'Geri'
+          title: t('marketplace.favorite'),
+          headerBackTitle: t('common.back')
         }}
       />
       <Stack.Screen
         name="Settings"
         component={SettingsScreen}
         options={{
-          title: 'Ayarlar',
-          headerBackTitle: 'Geri'
+          title: t('settings.title'),
+          headerBackTitle: t('common.back')
         }}
       />
       <Stack.Screen
         name="Compare"
         component={CompareScreen}
         options={{
-          title: 'Karşılaştır',
-          headerBackTitle: 'Geri'
+          title: t('marketplace.compare'),
+          headerBackTitle: t('common.back')
         }}
       />
       {/* New Screens (Port from Web) */}
@@ -180,8 +231,8 @@ function AppWithNotifications() {
         name="CustomDesign"
         component={CustomDesignScreen}
         options={{
-          title: 'Custom Design',
-          headerBackTitle: 'Back',
+          title: t('customDesign.title'),
+          headerBackTitle: t('common.back'),
           headerShown: false // Custom header in CustomDesignScreen
         }}
       />
@@ -194,6 +245,7 @@ function MainTabs() {
   const [userData, setUserData] = useState<any>(null);
   const insets = useSafeAreaInsets();
   const { theme, isDark } = useTheme();
+  const { t } = useTranslation();
   const { totalItems } = useCartStore();
   const { conversations, loadConversations, stopListeningToConversations } = useMessagingStore();
   const cartCount = totalItems();
@@ -248,9 +300,20 @@ function MainTabs() {
     };
   }, []);
 
-  const isSupplier = userData?.role === 'supplierLocal' ||
-                     userData?.role === 'supplierDropship' ||
-                     userData?.role === 'supplierInternational';
+  // Normalize role and determine user type
+  const userRole = normalizeRole(userData?.role);
+  const isAdmin = isAdminRole(userRole);
+  const isSupplier = isSupplierRole(userRole);
+  const isRetailer = isRetailerRole(userRole);
+
+  // Debug log
+  console.log('🔐 [App] User Role:', {
+    rawRole: userData?.role,
+    normalizedRole: userRole,
+    isAdmin,
+    isSupplier,
+    isRetailer
+  });
 
   return (
     <>
@@ -279,23 +342,24 @@ function MainTabs() {
           },
         }}
       >
-      {!isSupplier && (
+      {/* ADMIN TABS */}
+      {isAdmin && (
         <>
           <Tab.Screen
-            name="Home"
-            component={HomeScreen}
+            name="AdminDashboard"
+            component={AdminDashboardScreen}
             options={{
-              title: 'Ana Sayfa',
-              tabBarLabel: 'Ana Sayfa',
-              tabBarIcon: ({ color, size }) => <Home color={color} size={size} />,
+              title: t('admin.title'),
+              tabBarLabel: t('navigation.dashboard'),
+              tabBarIcon: ({ color, size }) => <Shield color={color} size={size} />,
             }}
           />
           <Tab.Screen
             name="Market"
             component={MarketNavigator}
             options={{
-              title: 'Market',
-              tabBarLabel: 'Market',
+              title: t('navigation.market'),
+              tabBarLabel: t('navigation.market'),
               tabBarIcon: ({ color, size }) => <Diamond color={color} size={size} />,
             }}
           />
@@ -303,8 +367,8 @@ function MainTabs() {
             name="Cart"
             component={CartScreen}
             options={{
-              title: 'Sepet',
-              tabBarLabel: 'Sepet',
+              title: t('navigation.cart'),
+              tabBarLabel: t('navigation.cart'),
               tabBarIcon: ({ color, size }) => <ShoppingCart color={color} size={size} />,
               tabBarBadge: cartCount > 0 ? cartCount : undefined,
               tabBarBadgeStyle: {
@@ -318,23 +382,94 @@ function MainTabs() {
           />
         </>
       )}
+
+      {/* RETAILER TABS */}
+      {isRetailer && (
+        <>
+          <Tab.Screen
+            name="Home"
+            component={HomeScreen}
+            options={{
+              title: t('navigation.home'),
+              tabBarLabel: t('navigation.home'),
+              tabBarIcon: ({ color, size }) => <Home color={color} size={size} />,
+            }}
+          />
+          <Tab.Screen
+            name="Market"
+            component={MarketNavigator}
+            options={{
+              title: t('navigation.market'),
+              tabBarLabel: t('navigation.market'),
+              tabBarIcon: ({ color, size }) => <Diamond color={color} size={size} />,
+            }}
+          />
+          <Tab.Screen
+            name="Cart"
+            component={CartScreen}
+            options={{
+              title: t('navigation.cart'),
+              tabBarLabel: t('navigation.cart'),
+              tabBarIcon: ({ color, size }) => <ShoppingCart color={color} size={size} />,
+              tabBarBadge: cartCount > 0 ? cartCount : undefined,
+              tabBarBadgeStyle: {
+                backgroundColor: theme.error,
+                fontSize: 10,
+                minWidth: 18,
+                height: 18,
+                top: 2,
+              },
+            }}
+          />
+        </>
+      )}
+
+      {/* SUPPLIER TABS */}
       {isSupplier && (
-        <Tab.Screen
-          name="SupplierDashboard"
-          component={SupplierDashboardScreen}
-          options={{
-            title: 'Stok & Satışlar',
-            tabBarLabel: 'Dashboard',
-            tabBarIcon: ({ color, size }) => <BarChart3 color={color} size={size} />,
-          }}
-        />
+        <>
+          <Tab.Screen
+            name="SupplierDashboard"
+            component={SupplierDashboardScreen}
+            options={{
+              title: t('supplier.title'),
+              tabBarLabel: t('navigation.dashboard'),
+              tabBarIcon: ({ color, size }) => <BarChart3 color={color} size={size} />,
+            }}
+          />
+          <Tab.Screen
+            name="Market"
+            component={MarketNavigator}
+            options={{
+              title: t('navigation.market'),
+              tabBarLabel: t('navigation.market'),
+              tabBarIcon: ({ color, size }) => <Diamond color={color} size={size} />,
+            }}
+          />
+          <Tab.Screen
+            name="Cart"
+            component={CartScreen}
+            options={{
+              title: t('navigation.cart'),
+              tabBarLabel: t('navigation.cart'),
+              tabBarIcon: ({ color, size }) => <ShoppingCart color={color} size={size} />,
+              tabBarBadge: cartCount > 0 ? cartCount : undefined,
+              tabBarBadgeStyle: {
+                backgroundColor: theme.error,
+                fontSize: 10,
+                minWidth: 18,
+                height: 18,
+                top: 2,
+              },
+            }}
+          />
+        </>
       )}
       <Tab.Screen
         name="Messages"
         component={MessagesScreen}
         options={{
-          title: 'Mesajlar',
-          tabBarLabel: 'Mesajlar',
+          title: t('navigation.messages'),
+          tabBarLabel: t('navigation.messages'),
           tabBarIcon: ({ color, size }) => <MessageCircle color={color} size={size} />,
           tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
           tabBarBadgeStyle: {
@@ -350,8 +485,8 @@ function MainTabs() {
         name="Orders"
         component={OrdersScreen}
         options={{
-          title: 'Siparişler',
-          tabBarLabel: 'Siparişler',
+          title: t('navigation.orders'),
+          tabBarLabel: t('navigation.orders'),
           tabBarIcon: ({ color, size }) => <Package color={color} size={size} />,
         }}
       />
@@ -359,8 +494,8 @@ function MainTabs() {
         name="Profile"
         component={ProfileScreen}
         options={{
-          title: 'Profil',
-          tabBarLabel: 'Profil',
+          title: t('navigation.profile'),
+          tabBarLabel: t('navigation.profile'),
           tabBarIcon: ({ color, size }) => <User color={color} size={size} />,
         }}
       />
@@ -459,78 +594,52 @@ export default function App() {
   // Show onboarding if needed
   if (showOnboarding && user) {
     return (
-      <ThemeProvider>
-        <SafeAreaProvider>
-          <StatusBar style="light" />
-          <OnboardingScreen onComplete={() => setShowOnboarding(false)} />
-        </SafeAreaProvider>
-      </ThemeProvider>
+      <LanguageProvider>
+        <ThemeProvider>
+          <SafeAreaProvider>
+            <StatusBar style="light" />
+            <OnboardingScreen onComplete={() => setShowOnboarding(false)} />
+          </SafeAreaProvider>
+        </ThemeProvider>
+      </LanguageProvider>
     );
   }
 
   // Giriş yapılmışsa Stack Navigator göster (Tab Navigator + Conversation + DiamondDetail)
   if (user) {
     return (
-      <ThemeProvider>
-        <SafeAreaProvider>
-          <NavigationContainer>
-            <StatusBar style="auto" />
-            <AppWithNotifications />
-          </NavigationContainer>
-        </SafeAreaProvider>
-      </ThemeProvider>
+      <LanguageProvider>
+        <ThemeProvider>
+          <SafeAreaProvider>
+            <NavigationContainer>
+              <StatusBar style="auto" />
+              <AppWithNotifications />
+            </NavigationContainer>
+          </SafeAreaProvider>
+        </ThemeProvider>
+      </LanguageProvider>
     );
   }
 
   // Login ekranı
   return (
-    <ThemeProvider>
-      <SafeAreaProvider>
-        <View style={styles.container}>
-        <StatusBar style="auto" />
-
-      <View style={styles.loginContainer}>
-        <Text style={styles.logo}>💎 PBT Mobile Test</Text>
-        <Text style={styles.subtitle}>Mevcut hesabınızla giriş yapın</Text>
-
-        <TextInput
-          style={styles.input}
-          placeholder="Email"
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          keyboardType="email-address"
-          editable={!loading}
-        />
-
-        <TextInput
-          style={styles.input}
-          placeholder="Şifre"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          editable={!loading}
-        />
-
-        <TouchableOpacity
-          style={[styles.button, loading && styles.buttonDisabled]}
-          onPress={handleLogin}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>Giriş Yap</Text>
-          )}
-        </TouchableOpacity>
-
-        <Text style={styles.note}>
-          ℹ️ Web sitenizdeki mevcut hesabınızla test edin
-        </Text>
-      </View>
-      </View>
-    </SafeAreaProvider>
-    </ThemeProvider>
+    <LanguageProvider>
+      <ThemeProvider>
+        <SafeAreaProvider>
+          <View style={styles.container}>
+            <StatusBar style="auto" />
+            <LoginForm
+              email={email}
+              setEmail={setEmail}
+              password={password}
+              setPassword={setPassword}
+              handleLogin={handleLogin}
+              loading={loading}
+            />
+          </View>
+        </SafeAreaProvider>
+      </ThemeProvider>
+    </LanguageProvider>
   );
 }
 

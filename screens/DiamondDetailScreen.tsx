@@ -22,6 +22,7 @@ import { WebView } from 'react-native-webview';
 import { useTheme } from '../context/ThemeContext';
 import { fetchJtrMedia } from '../services/jtrService';
 import { trackViewItem, trackAddToCart } from '../services/analyticsService';
+import { useTranslation } from 'react-i18next';
 
 const { width } = Dimensions.get('window');
 
@@ -66,6 +67,7 @@ export default function DiamondDetailScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const { stoneId } = route.params as { stoneId: string };
 
   const [stone, setStone] = useState<Stone | null>(null);
@@ -176,12 +178,12 @@ export default function DiamondDetailScreen() {
           currency: 'USD',
         });
       } else {
-        Alert.alert('Hata', 'Taş bulunamadı');
+        Alert.alert(t('common.error'), t('stoneDetail.loadingError'));
         navigation.goBack();
       }
     } catch (error) {
       console.error('Error loading stone:', error);
-      Alert.alert('Hata', 'Taş yüklenirken bir hata oluştu');
+      Alert.alert(t('common.error'), t('stoneDetail.loadingMediaError'));
     } finally {
       setLoading(false);
     }
@@ -192,7 +194,7 @@ export default function DiamondDetailScreen() {
 
     try {
       if (inCart) {
-        Alert.alert('Bilgi', 'Bu taş zaten sepetinizde');
+        Alert.alert(t('common.success'), t('stoneDetail.alreadyInCart'));
         return;
       }
 
@@ -212,12 +214,12 @@ export default function DiamondDetailScreen() {
         supplierName: stone.supplierName,
         addedAt: Date.now(),
       });
-      Alert.alert('Başarılı', 'Taş sepete eklendi', [
-        { text: 'Sepete Git', onPress: () => navigation.navigate('Cart' as never) },
-        { text: 'Tamam', style: 'cancel' },
+      Alert.alert(t('common.success'), t('stoneDetail.addToCartSuccess'), [
+        { text: t('stoneDetail.goToCart'), onPress: () => navigation.navigate('Cart' as never) },
+        { text: t('common.confirm'), style: 'cancel' },
       ]);
     } catch (error: any) {
-      Alert.alert('Hata', error.message || 'Sepete eklenirken bir hata oluştu');
+      Alert.alert(t('common.error'), error.message || t('stoneDetail.addToCartError'));
     }
   };
 
@@ -225,7 +227,7 @@ export default function DiamondDetailScreen() {
     return (
       <View style={[styles.loadingContainer, { backgroundColor: theme.background }]}>
         <ActivityIndicator size="large" color={theme.primary} />
-        <Text style={[styles.loadingText, { color: theme.textSecondary }]}>Yükleniyor...</Text>
+        <Text style={[styles.loadingText, { color: theme.textSecondary }]}>{t('stoneDetail.loading')}</Text>
       </View>
     );
   }
@@ -233,7 +235,7 @@ export default function DiamondDetailScreen() {
   if (!stone) {
     return (
       <View style={[styles.emptyContainer, { backgroundColor: theme.background }]}>
-        <Text style={[styles.emptyText, { color: theme.textSecondary }]}>Taş bulunamadı</Text>
+        <Text style={[styles.emptyText, { color: theme.textSecondary }]}>{t('stoneDetail.loadingError')}</Text>
       </View>
     );
   }
@@ -250,7 +252,7 @@ export default function DiamondDetailScreen() {
           {isLoadingMedia ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color="#3b82f6" />
-              <Text style={[styles.loadingText, { color: theme.textSecondary }]}>Medya yükleniyor...</Text>
+              <Text style={[styles.loadingText, { color: theme.textSecondary }]}>{t('stoneDetail.loadingMedia')}</Text>
             </View>
           ) : mediaData.type === 'iframe' ? (
             <WebView
@@ -278,13 +280,13 @@ export default function DiamondDetailScreen() {
                 resizeMode="contain"
               />
               <View style={styles.zoomHint}>
-                <Text style={styles.zoomHintText}>🔍 Yakınlaştırmak için tıkla</Text>
+                <Text style={styles.zoomHintText}>🔍 {t('stoneDetail.zoomToView')}</Text>
               </View>
             </TouchableOpacity>
           ) : (
             <View style={[styles.placeholderImage, { backgroundColor: theme.backgroundCard }]}>
               <Text style={styles.placeholderText}>💎</Text>
-              <Text style={[styles.placeholderSubtext, { color: theme.textDim }]}>Medya Yok</Text>
+              <Text style={[styles.placeholderSubtext, { color: theme.textDim }]}>{t('stoneDetail.noMedia')}</Text>
             </View>
           )}
         </View>
@@ -299,53 +301,53 @@ export default function DiamondDetailScreen() {
             stone.availability === 'sold' && styles.statusSold,
           ]}>
             <Text style={styles.statusText}>
-              {(stone.availability === 'available' || stone.availability === 'inCart') ? 'Mevcut' :
-               stone.availability === 'reserved' ? 'Rezerve' : 'Satıldı'}
+              {(stone.availability === 'available' || stone.availability === 'inCart') ? t('stoneDetail.available') :
+               stone.availability === 'reserved' ? t('stoneDetail.reserved') : t('stoneDetail.sold')}
             </Text>
           </View>
         </View>
 
         {/* Main Specs */}
         <View style={[styles.section, { borderBottomColor: theme.borderLight }]}>
-          <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Ana Özellikler</Text>
+          <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>{t('stoneDetail.mainFeatures')}</Text>
           <View style={styles.specsGrid}>
             <View style={[styles.specItem, { backgroundColor: theme.backgroundCard }]}>
-              <Text style={[styles.specLabel, { color: theme.textSecondary }]}>Şekil</Text>
+              <Text style={[styles.specLabel, { color: theme.textSecondary }]}>{t('stoneDetail.shape')}</Text>
               <Text style={[styles.specValue, { color: theme.textPrimary }]}>{stone.shape}</Text>
             </View>
             <View style={[styles.specItem, { backgroundColor: theme.backgroundCard }]}>
-              <Text style={[styles.specLabel, { color: theme.textSecondary }]}>Karat</Text>
+              <Text style={[styles.specLabel, { color: theme.textSecondary }]}>{t('marketplace.carat')}</Text>
               <Text style={[styles.specValue, { color: theme.textPrimary }]}>{stone.carat} CT</Text>
             </View>
             <View style={[styles.specItem, { backgroundColor: theme.backgroundCard }]}>
-              <Text style={[styles.specLabel, { color: theme.textSecondary }]}>Renk</Text>
+              <Text style={[styles.specLabel, { color: theme.textSecondary }]}>{t('stoneDetail.color')}</Text>
               <Text style={[styles.specValue, { color: theme.textPrimary }]}>{stone.color}</Text>
             </View>
             <View style={[styles.specItem, { backgroundColor: theme.backgroundCard }]}>
-              <Text style={[styles.specLabel, { color: theme.textSecondary }]}>Saflık</Text>
+              <Text style={[styles.specLabel, { color: theme.textSecondary }]}>{t('stoneDetail.clarity')}</Text>
               <Text style={[styles.specValue, { color: theme.textPrimary }]}>{stone.clarity}</Text>
             </View>
             {stone.cut && (
               <View style={[styles.specItem, { backgroundColor: theme.backgroundCard }]}>
-                <Text style={[styles.specLabel, { color: theme.textSecondary }]}>Kesim</Text>
+                <Text style={[styles.specLabel, { color: theme.textSecondary }]}>{t('stoneDetail.cut')}</Text>
                 <Text style={[styles.specValue, { color: theme.textPrimary }]}>{stone.cut}</Text>
               </View>
             )}
             {stone.polish && (
               <View style={[styles.specItem, { backgroundColor: theme.backgroundCard }]}>
-                <Text style={[styles.specLabel, { color: theme.textSecondary }]}>Cila</Text>
+                <Text style={[styles.specLabel, { color: theme.textSecondary }]}>{t('stoneDetail.polish')}</Text>
                 <Text style={[styles.specValue, { color: theme.textPrimary }]}>{stone.polish}</Text>
               </View>
             )}
             {stone.symmetry && (
               <View style={[styles.specItem, { backgroundColor: theme.backgroundCard }]}>
-                <Text style={[styles.specLabel, { color: theme.textSecondary }]}>Simetri</Text>
+                <Text style={[styles.specLabel, { color: theme.textSecondary }]}>{t('stoneDetail.symmetry')}</Text>
                 <Text style={[styles.specValue, { color: theme.textPrimary }]}>{stone.symmetry}</Text>
               </View>
             )}
             {stone.fluorescence && (
               <View style={[styles.specItem, { backgroundColor: theme.backgroundCard }]}>
-                <Text style={[styles.specLabel, { color: theme.textSecondary }]}>Floresans</Text>
+                <Text style={[styles.specLabel, { color: theme.textSecondary }]}>{t('stoneDetail.fluorescence')}</Text>
                 <Text style={[styles.specValue, { color: theme.textPrimary }]}>{stone.fluorescence}</Text>
               </View>
             )}
@@ -354,7 +356,7 @@ export default function DiamondDetailScreen() {
 
         {/* Certification */}
         <View style={[styles.section, { borderBottomColor: theme.borderLight }]}>
-          <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Sertifika</Text>
+          <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>{t('stoneDetail.certificateTitle')}</Text>
           <View style={[styles.certBox, { backgroundColor: theme.backgroundCard }]}>
             <Text style={[styles.certLab, { color: theme.textPrimary }]}>{stone.certification}</Text>
             {stone.certificateNumber && (
@@ -367,11 +369,11 @@ export default function DiamondDetailScreen() {
                   if (stone.certificateUrl?.startsWith('http')) {
                     setPdfViewerVisible(true);
                   } else {
-                    Alert.alert('Bilgi', 'Sertifika URL\'i geçersiz');
+                    Alert.alert(t('common.success'), t('stoneDetail.invalidCertUrl'));
                   }
                 }}
               >
-                <Text style={styles.viewCertButtonText}>📄 Sertifikayı Görüntüle</Text>
+                <Text style={styles.viewCertButtonText}>📄 {t('stoneDetail.viewCertificate')}</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -380,7 +382,7 @@ export default function DiamondDetailScreen() {
         {/* Measurements */}
         {stone.measurements && (
           <View style={[styles.section, { borderBottomColor: theme.borderLight }]}>
-            <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Ölçüler</Text>
+            <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>{t('stoneDetail.measurements')}</Text>
             <Text style={[styles.measurements, { color: theme.textSecondary }]}>{stone.measurements}</Text>
           </View>
         )}
@@ -388,7 +390,7 @@ export default function DiamondDetailScreen() {
         {/* Supplier */}
         {stone.supplierName && (
           <View style={[styles.section, { borderBottomColor: theme.borderLight }]}>
-            <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Tedarikçi</Text>
+            <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>{t('stoneDetail.supplier')}</Text>
             <Text style={[styles.supplierName, { color: theme.primary }]}>{stone.supplierName}</Text>
           </View>
         )}
@@ -396,7 +398,7 @@ export default function DiamondDetailScreen() {
         {/* Description */}
         {stone.description && (
           <View style={[styles.section, { borderBottomColor: theme.borderLight }]}>
-            <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Açıklama</Text>
+            <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>{t('stoneDetail.description')}</Text>
             <Text style={[styles.description, { color: theme.textSecondary }]}>{stone.description}</Text>
           </View>
         )}
@@ -407,7 +409,7 @@ export default function DiamondDetailScreen() {
       {/* Bottom Price & Add to Cart */}
       <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16), borderTopColor: theme.borderLight, backgroundColor: theme.backgroundCard }]}>
         <View style={styles.priceContainer}>
-          <Text style={[styles.priceLabel, { color: theme.textSecondary }]}>Toplam Fiyat</Text>
+          <Text style={[styles.priceLabel, { color: theme.textSecondary }]}>{t('stoneDetail.totalPrice')}</Text>
           <Text style={[styles.priceValue, { color: theme.textPrimary }]}>${displayPrice.toLocaleString()}</Text>
           <Text style={[styles.pricePerCarat, { color: theme.textDim }]}>${displayPricePerCarat.toLocaleString()}/CT</Text>
         </View>
@@ -421,7 +423,7 @@ export default function DiamondDetailScreen() {
           disabled={stone.availability !== 'available' || inCart}
         >
           <Text style={styles.addButtonText}>
-            {inCart ? '✓ Sepette' : stone.availability !== 'available' ? 'Mevcut Değil' : 'Sepete Ekle'}
+            {inCart ? `✓ ${t('stoneDetail.inCart')}` : stone.availability !== 'available' ? t('stoneDetail.notAvailable') : t('stoneDetail.addToCart')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -459,7 +461,7 @@ export default function DiamondDetailScreen() {
         >
           <View style={[styles.pdfModalContainer, { backgroundColor: theme.background }]}>
             <View style={[styles.pdfModalHeader, { borderBottomColor: theme.border, backgroundColor: theme.backgroundCard }]}>
-              <Text style={[styles.pdfModalTitle, { color: theme.textPrimary }]}>Sertifika</Text>
+              <Text style={[styles.pdfModalTitle, { color: theme.textPrimary }]}>{t('stoneDetail.certificateTitle')}</Text>
               <TouchableOpacity
                 style={[styles.pdfCloseButton, { backgroundColor: theme.background }]}
                 onPress={() => setPdfViewerVisible(false)}
@@ -474,7 +476,7 @@ export default function DiamondDetailScreen() {
               renderLoading={() => (
                 <View style={[styles.pdfLoadingContainer, { backgroundColor: theme.background }]}>
                   <ActivityIndicator size="large" color={theme.primary} />
-                  <Text style={[styles.pdfLoadingText, { color: theme.textSecondary }]}>Sertifika yükleniyor...</Text>
+                  <Text style={[styles.pdfLoadingText, { color: theme.textSecondary }]}>{t('stoneDetail.loadingCertificate')}</Text>
                 </View>
               )}
             />
@@ -487,7 +489,7 @@ export default function DiamondDetailScreen() {
               }}
             >
               <Text style={styles.pdfOpenBrowserButtonText}>
-                🌐 Tarayıcıda Aç
+                🌐 {t('stoneDetail.openInBrowser')}
               </Text>
             </TouchableOpacity>
           </View>

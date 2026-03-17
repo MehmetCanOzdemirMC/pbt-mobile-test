@@ -13,6 +13,7 @@ import {
   TouchableOpacity,
   ScrollView
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../context/ThemeContext';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import {
@@ -36,12 +37,13 @@ const Tab = createMaterialTopTabNavigator();
 
 export default function AdminDashboardScreen({ navigation }: any) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       {/* Header */}
       <View style={[styles.header, { backgroundColor: theme.backgroundCard, borderBottomColor: theme.border }]}>
-        <Text style={[styles.title, { color: theme.textPrimary }]}>Admin Dashboard</Text>
+        <Text style={[styles.title, { color: theme.textPrimary }]}>{t('admin.dashboardTitle')}</Text>
       </View>
 
       {/* Tabs */}
@@ -75,7 +77,7 @@ export default function AdminDashboardScreen({ navigation }: any) {
           component={UsersTabScreen}
           options={{
             tabBarIcon: ({ color }) => <Users size={18} color={color} />,
-            tabBarLabel: 'Users'
+            tabBarLabel: t('admin.tabs.users')
           }}
         />
         <Tab.Screen
@@ -83,7 +85,7 @@ export default function AdminDashboardScreen({ navigation }: any) {
           component={AnalyticsTabScreen}
           options={{
             tabBarIcon: ({ color }) => <BarChart3 size={18} color={color} />,
-            tabBarLabel: 'Analytics'
+            tabBarLabel: t('admin.tabs.analytics')
           }}
         />
         <Tab.Screen
@@ -91,7 +93,7 @@ export default function AdminDashboardScreen({ navigation }: any) {
           component={EmailTabScreen}
           options={{
             tabBarIcon: ({ color }) => <Mail size={18} color={color} />,
-            tabBarLabel: 'Email'
+            tabBarLabel: t('admin.tabs.email')
           }}
         />
         <Tab.Screen
@@ -99,7 +101,7 @@ export default function AdminDashboardScreen({ navigation }: any) {
           component={StockUpdateTabScreen}
           options={{
             tabBarIcon: ({ color }) => <Package size={18} color={color} />,
-            tabBarLabel: 'Stock'
+            tabBarLabel: t('admin.tabs.stock')
           }}
         />
         <Tab.Screen
@@ -107,7 +109,7 @@ export default function AdminDashboardScreen({ navigation }: any) {
           component={RapaportTabScreen}
           options={{
             tabBarIcon: ({ color }) => <FileText size={18} color={color} />,
-            tabBarLabel: 'Rapaport'
+            tabBarLabel: t('admin.tabs.rapaport')
           }}
         />
         <Tab.Screen
@@ -115,7 +117,7 @@ export default function AdminDashboardScreen({ navigation }: any) {
           component={SettingsTabScreen}
           options={{
             tabBarIcon: ({ color }) => <Settings size={18} color={color} />,
-            tabBarLabel: 'Settings'
+            tabBarLabel: t('admin.tabs.settings')
           }}
         />
       </Tab.Navigator>
