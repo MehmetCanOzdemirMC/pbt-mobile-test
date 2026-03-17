@@ -8,6 +8,7 @@ import {
   Image,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useTranslation } from 'react-i18next';
 
 const { width, height } = Dimensions.get('window');
 
@@ -15,39 +16,40 @@ interface OnboardingScreenProps {
   onComplete: () => void;
 }
 
-const slides = [
-  {
-    id: 1,
-    emoji: '💎',
-    title: 'PBT Mobile\'e Hoş Geldiniz',
-    description: 'Binlerce pırlanta ve değerli taşı keşfedin',
-    color: '#007AFF',
-  },
-  {
-    id: 2,
-    emoji: '🔍',
-    title: 'Filtreleme ve Arama',
-    description: 'Gelişmiş filtrelerle aradığınız taşı kolayca bulun',
-    color: '#34C759',
-  },
-  {
-    id: 3,
-    emoji: '💬',
-    title: 'Tedarikçilerle İletişim',
-    description: 'Anlık mesajlaşma ile tedarikçilerle doğrudan görüşün',
-    color: '#FF9500',
-  },
-  {
-    id: 4,
-    emoji: '⚖️',
-    title: 'Karşılaştır ve Karar Ver',
-    description: 'Taşları karşılaştırıp en iyi seçimi yapın',
-    color: '#FF3B30',
-  },
-];
-
 export default function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
+  const { t } = useTranslation();
   const [currentIndex, setCurrentIndex] = useState(0);
+
+  const slides = [
+    {
+      id: 1,
+      emoji: '💎',
+      title: t('onboarding.slide1Title'),
+      description: t('onboarding.slide1Description'),
+      color: '#007AFF',
+    },
+    {
+      id: 2,
+      emoji: '🔍',
+      title: t('onboarding.slide2Title'),
+      description: t('onboarding.slide2Description'),
+      color: '#34C759',
+    },
+    {
+      id: 3,
+      emoji: '💬',
+      title: t('onboarding.slide3Title'),
+      description: t('onboarding.slide3Description'),
+      color: '#FF9500',
+    },
+    {
+      id: 4,
+      emoji: '⚖️',
+      title: t('onboarding.slide4Title'),
+      description: t('onboarding.slide4Description'),
+      color: '#FF3B30',
+    },
+  ];
 
   const handleNext = () => {
     if (currentIndex < slides.length - 1) {
@@ -73,7 +75,7 @@ export default function OnboardingScreen({ onComplete }: OnboardingScreenProps) 
       <View style={styles.skipContainer}>
         {currentIndex < slides.length - 1 && (
           <TouchableOpacity onPress={handleSkip}>
-            <Text style={styles.skipText}>Geç</Text>
+            <Text style={styles.skipText}>{t('onboarding.skip')}</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -99,7 +101,7 @@ export default function OnboardingScreen({ onComplete }: OnboardingScreenProps) 
 
         <TouchableOpacity style={styles.button} onPress={handleNext}>
           <Text style={styles.buttonText}>
-            {currentIndex === slides.length - 1 ? 'Başla' : 'İleri'}
+            {currentIndex === slides.length - 1 ? t('onboarding.start') : t('onboarding.next')}
           </Text>
         </TouchableOpacity>
       </View>

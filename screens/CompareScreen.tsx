@@ -1,11 +1,13 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { useCompareStore } from '../stores/compareStore';
 import { useTheme } from '../context/ThemeContext';
 
 export default function CompareScreen() {
   const navigation = useNavigation();
+  const { t } = useTranslation();
   const { theme } = useTheme();
   const { compareList, removeFromCompare, clearCompare } = useCompareStore();
 
@@ -13,50 +15,50 @@ export default function CompareScreen() {
     return (
       <View style={[styles.emptyContainer, { backgroundColor: theme.background }]}>
         <Text style={styles.emptyIcon}>⚖️</Text>
-        <Text style={[styles.emptyTitle, { color: theme.textPrimary }]}>Karşılaştırılacak taş yok</Text>
+        <Text style={[styles.emptyTitle, { color: theme.textPrimary }]}>{t('compare.emptyTitle')}</Text>
         <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
-          Marketplace'den taşları seçerek karşılaştırma yapabilirsiniz
+          {t('compare.emptyDescription')}
         </Text>
         <TouchableOpacity
           style={[styles.browseButton, { backgroundColor: theme.primary }]}
           onPress={() => (navigation as any).navigate('Marketplace')}
         >
-          <Text style={styles.browseButtonText}>Taşlara Gözat</Text>
+          <Text style={styles.browseButtonText}>{t('compare.browseStones')}</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
   const specs = [
-    { key: 'stoneId', label: 'Stock ID' },
-    { key: 'shape', label: 'Şekil' },
-    { key: 'carat', label: 'Karat', format: (v: number) => `${v.toFixed(2)} CT` },
-    { key: 'color', label: 'Renk' },
-    { key: 'clarity', label: 'Berraklık' },
-    { key: 'cut', label: 'Kesim' },
-    { key: 'polish', label: 'Cila' },
-    { key: 'symmetry', label: 'Simetri' },
-    { key: 'totalPrice', label: 'Fiyat', format: (v: number) => `$${v.toLocaleString()}` },
-    { key: 'pricePerCarat', label: '$/CT', format: (v: number) => `$${v.toLocaleString()}` },
+    { key: 'stoneId', label: t('compare.spec.stockId') },
+    { key: 'shape', label: t('compare.spec.shape') },
+    { key: 'carat', label: t('compare.spec.carat'), format: (v: number) => `${v.toFixed(2)} CT` },
+    { key: 'color', label: t('compare.spec.color') },
+    { key: 'clarity', label: t('compare.spec.clarity') },
+    { key: 'cut', label: t('compare.spec.cut') },
+    { key: 'polish', label: t('compare.spec.polish') },
+    { key: 'symmetry', label: t('compare.spec.symmetry') },
+    { key: 'totalPrice', label: t('compare.spec.price'), format: (v: number) => `$${v.toLocaleString()}` },
+    { key: 'pricePerCarat', label: t('compare.spec.pricePerCarat'), format: (v: number) => `$${v.toLocaleString()}` },
   ];
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={[styles.header, { backgroundColor: theme.backgroundCard, borderBottomColor: theme.border }]}>
-        <Text style={[styles.headerTitle, { color: theme.textPrimary }]}>⚖️ Karşılaştırma</Text>
+        <Text style={[styles.headerTitle, { color: theme.textPrimary }]}>⚖️ {t('compare.title')}</Text>
         <TouchableOpacity
           onPress={() => {
-            Alert.alert('Tümünü Temizle', 'Tüm karşılaştırmaları silmek istiyor musunuz?', [
-              { text: 'İptal', style: 'cancel' },
+            Alert.alert(t('compare.clearAll'), t('compare.clearConfirm'), [
+              { text: t('common.cancel'), style: 'cancel' },
               {
-                text: 'Temizle',
+                text: t('compare.clear'),
                 style: 'destructive',
                 onPress: () => clearCompare(),
               },
             ]);
           }}
         >
-          <Text style={[styles.clearButton, { color: theme.error }]}>🗑️ Temizle</Text>
+          <Text style={[styles.clearButton, { color: theme.error }]}>🗑️ {t('compare.clear')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -65,7 +67,7 @@ export default function CompareScreen() {
           {/* Header Row */}
           <View style={[styles.tableRow, { borderBottomColor: theme.border }]}>
             <View style={[styles.labelCell, styles.headerCell, { backgroundColor: theme.primary }]}>
-              <Text style={styles.headerText}>Özellik</Text>
+              <Text style={styles.headerText}>{t('compare.property')}</Text>
             </View>
             {compareList.map((stone) => (
               <View key={stone.id} style={[styles.valueCell, styles.headerCell, { backgroundColor: theme.primary }]}>
