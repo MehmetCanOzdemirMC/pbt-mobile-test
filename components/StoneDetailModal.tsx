@@ -8,6 +8,7 @@ import {
   ScrollView,
   Alert,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useCartStore } from '../stores/cartStore';
 import { useTheme } from '../context/ThemeContext';
 
@@ -43,12 +44,13 @@ interface StoneDetailModalProps {
 export default function StoneDetailModal({ visible, stone, onClose }: StoneDetailModalProps) {
   const { addToCart } = useCartStore();
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   if (!stone) return null;
 
   const handleAddToCart = async () => {
     if (stone.status !== 'available') {
-      Alert.alert('Uyarı', 'Bu taş müsait değil');
+      Alert.alert(t('stoneDetailModal.warning'), t('stoneDetailModal.notAvailableMessage'));
       return;
     }
 
@@ -69,10 +71,10 @@ export default function StoneDetailModal({ visible, stone, onClose }: StoneDetai
         supplierName: stone.supplierName,
         addedAt: Date.now(),
       });
-      Alert.alert('Başarılı', 'Taş sepete eklendi');
+      Alert.alert(t('stoneDetailModal.success'), t('stoneDetailModal.addedToCart'));
       onClose();
     } catch (error) {
-      Alert.alert('Hata', 'Sepete eklenirken bir hata oluştu');
+      Alert.alert(t('stoneDetailModal.error'), t('stoneDetailModal.addToCartError'));
     }
   };
 
@@ -84,7 +86,7 @@ export default function StoneDetailModal({ visible, stone, onClose }: StoneDetai
     >
       <View style={[styles.container, { backgroundColor: theme.background }]}>
         <View style={[styles.header, { backgroundColor: theme.backgroundCard, borderBottomColor: theme.border }]}>
-          <Text style={[styles.headerTitle, { color: theme.textPrimary }]}>💎 Taş Detayı</Text>
+          <Text style={[styles.headerTitle, { color: theme.textPrimary }]}>💎 {t('stoneDetailModal.title')}</Text>
           <TouchableOpacity onPress={onClose} style={[styles.closeButton, { backgroundColor: theme.background }]}>
             <Text style={[styles.closeButtonText, { color: theme.textSecondary }]}>✕</Text>
           </TouchableOpacity>
@@ -101,69 +103,69 @@ export default function StoneDetailModal({ visible, stone, onClose }: StoneDetai
                 styles.statusText,
                 stone.status === 'available' ? styles.statusAvailableText : styles.statusReservedText
               ]}>
-                {stone.status === 'available' ? '✓ Mevcut' : '⏳ Rezerve'}
+                {stone.status === 'available' ? '✓ ' + t('stoneDetailModal.available') : '⏳ ' + t('stoneDetailModal.reserved')}
               </Text>
             </View>
           </View>
 
           <View style={styles.priceSection}>
             <View style={[styles.priceCard, { backgroundColor: theme.backgroundCard }]}>
-              <Text style={[styles.priceLabel, { color: theme.textSecondary }]}>Toplam Fiyat</Text>
+              <Text style={[styles.priceLabel, { color: theme.textSecondary }]}>{t('stoneDetailModal.totalPrice')}</Text>
               <Text style={[styles.price, { color: theme.primary }]}>${stone.totalPrice.toLocaleString()}</Text>
             </View>
             <View style={[styles.priceCard, { backgroundColor: theme.backgroundCard }]}>
-              <Text style={[styles.priceLabel, { color: theme.textSecondary }]}>Karat Fiyatı</Text>
+              <Text style={[styles.priceLabel, { color: theme.textSecondary }]}>{t('stoneDetailModal.pricePerCarat')}</Text>
               <Text style={[styles.pricePerCarat, { color: theme.textSecondary }]}>${stone.pricePerCarat.toLocaleString()}/CT</Text>
             </View>
           </View>
 
           <View style={[styles.section, { backgroundColor: theme.backgroundCard }]}>
-            <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Temel Özellikler</Text>
+            <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>{t('stoneDetailModal.basicFeatures')}</Text>
 
             <View style={[styles.detailRow, { borderBottomColor: theme.borderLight }]}>
-              <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>Şekil:</Text>
+              <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>{t('stoneDetailModal.shape')}:</Text>
               <Text style={[styles.detailValue, { color: theme.textPrimary }]}>{stone.shape}</Text>
             </View>
 
             <View style={[styles.detailRow, { borderBottomColor: theme.borderLight }]}>
-              <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>Karat:</Text>
+              <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>{t('stoneDetailModal.carat')}:</Text>
               <Text style={[styles.detailValue, { color: theme.textPrimary }]}>{stone.carat.toFixed(2)} CT</Text>
             </View>
 
             <View style={[styles.detailRow, { borderBottomColor: theme.borderLight }]}>
-              <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>Renk:</Text>
+              <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>{t('stoneDetailModal.color')}:</Text>
               <Text style={[styles.detailValue, { color: theme.textPrimary }]}>{stone.color}</Text>
             </View>
 
             <View style={[styles.detailRow, { borderBottomColor: theme.borderLight }]}>
-              <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>Berraklık:</Text>
+              <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>{t('stoneDetailModal.clarity')}:</Text>
               <Text style={[styles.detailValue, { color: theme.textPrimary }]}>{stone.clarity}</Text>
             </View>
 
             {stone.cut && (
               <View style={[styles.detailRow, { borderBottomColor: theme.borderLight }]}>
-                <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>Kesim:</Text>
+                <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>{t('stoneDetailModal.cut')}:</Text>
                 <Text style={[styles.detailValue, { color: theme.textPrimary }]}>{stone.cut}</Text>
               </View>
             )}
 
             {stone.polish && (
               <View style={[styles.detailRow, { borderBottomColor: theme.borderLight }]}>
-                <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>Cila:</Text>
+                <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>{t('stoneDetailModal.polish')}:</Text>
                 <Text style={[styles.detailValue, { color: theme.textPrimary }]}>{stone.polish}</Text>
               </View>
             )}
 
             {stone.symmetry && (
               <View style={[styles.detailRow, { borderBottomColor: theme.borderLight }]}>
-                <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>Simetri:</Text>
+                <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>{t('stoneDetailModal.symmetry')}:</Text>
                 <Text style={[styles.detailValue, { color: theme.textPrimary }]}>{stone.symmetry}</Text>
               </View>
             )}
 
             {stone.fluorescence && (
               <View style={[styles.detailRow, { borderBottomColor: theme.borderLight }]}>
-                <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>Floresans:</Text>
+                <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>{t('stoneDetailModal.fluorescence')}:</Text>
                 <Text style={[styles.detailValue, { color: theme.textPrimary }]}>{stone.fluorescence}</Text>
               </View>
             )}
@@ -171,25 +173,25 @@ export default function StoneDetailModal({ visible, stone, onClose }: StoneDetai
 
           {(stone.depth || stone.table || stone.measurements) && (
             <View style={[styles.section, { backgroundColor: theme.backgroundCard }]}>
-              <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Ölçüler</Text>
+              <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>{t('stoneDetailModal.measurements')}</Text>
 
               {stone.measurements && (
                 <View style={[styles.detailRow, { borderBottomColor: theme.borderLight }]}>
-                  <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>Boyutlar:</Text>
+                  <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>{t('stoneDetailModal.dimensions')}:</Text>
                   <Text style={[styles.detailValue, { color: theme.textPrimary }]}>{stone.measurements} mm</Text>
                 </View>
               )}
 
               {stone.depth && (
                 <View style={[styles.detailRow, { borderBottomColor: theme.borderLight }]}>
-                  <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>Derinlik:</Text>
+                  <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>{t('stoneDetailModal.depth')}:</Text>
                   <Text style={[styles.detailValue, { color: theme.textPrimary }]}>{stone.depth}%</Text>
                 </View>
               )}
 
               {stone.table && (
                 <View style={[styles.detailRow, { borderBottomColor: theme.borderLight }]}>
-                  <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>Tablo:</Text>
+                  <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>{t('stoneDetailModal.table')}:</Text>
                   <Text style={[styles.detailValue, { color: theme.textPrimary }]}>{stone.table}%</Text>
                 </View>
               )}
@@ -198,18 +200,18 @@ export default function StoneDetailModal({ visible, stone, onClose }: StoneDetai
 
           {(stone.certificate || stone.certificateNumber) && (
             <View style={[styles.section, { backgroundColor: theme.backgroundCard }]}>
-              <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Sertifika</Text>
+              <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>{t('stoneDetailModal.certificate')}</Text>
 
               {stone.certificate && (
                 <View style={[styles.detailRow, { borderBottomColor: theme.borderLight }]}>
-                  <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>Sertifika Tipi:</Text>
+                  <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>{t('stoneDetailModal.certificateType')}:</Text>
                   <Text style={[styles.detailValue, { color: theme.textPrimary }]}>{stone.certificate}</Text>
                 </View>
               )}
 
               {stone.certificateNumber && (
                 <View style={[styles.detailRow, { borderBottomColor: theme.borderLight }]}>
-                  <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>Sertifika No:</Text>
+                  <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>{t('stoneDetailModal.certificateNumber')}:</Text>
                   <Text style={[styles.detailValue, { color: theme.textPrimary }]}>{stone.certificateNumber}</Text>
                 </View>
               )}
@@ -218,7 +220,7 @@ export default function StoneDetailModal({ visible, stone, onClose }: StoneDetai
 
           {stone.supplierName && (
             <View style={[styles.section, { backgroundColor: theme.backgroundCard }]}>
-              <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Tedarikçi</Text>
+              <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>{t('stoneDetailModal.supplier')}</Text>
               <View style={[styles.supplierCard, { backgroundColor: theme.background }]}>
                 <Text style={[styles.supplierName, { color: theme.textPrimary }]}>🏢 {stone.supplierName}</Text>
               </View>
@@ -237,7 +239,7 @@ export default function StoneDetailModal({ visible, stone, onClose }: StoneDetai
             disabled={Boolean(stone.status !== 'available')}
           >
             <Text style={styles.addToCartButtonText}>
-              {stone.status === 'available' ? '🛒 Sepete Ekle' : '⏳ Müsait Değil'}
+              {stone.status === 'available' ? '🛒 ' + t('stoneDetailModal.addToCart') : '⏳ ' + t('stoneDetailModal.notAvailable')}
             </Text>
           </TouchableOpacity>
         </View>

@@ -10,6 +10,7 @@ import {
   Alert,
   Platform,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { collection, addDoc, serverTimestamp, query, where, getDocs } from 'firebase/firestore';
 import { auth, db } from '../config/firebase';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -28,6 +29,7 @@ interface CreateDiscountModalProps {
 }
 
 export default function CreateDiscountModal({ visible, onClose, onSuccess }: CreateDiscountModalProps) {
+  const { t } = useTranslation();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [percentage, setPercentage] = useState('');
@@ -62,7 +64,7 @@ export default function CreateDiscountModal({ visible, onClose, onSuccess }: Cre
       setCustomers(customersList);
     } catch (error) {
       console.error('Error loading customers:', error);
-      Alert.alert('Hata', 'Müşteriler yüklenemedi');
+      Alert.alert(t('createDiscountModal.error'), t('createDiscountModal.loadCustomersError'));
     } finally {
       setLoadingCustomers(false);
     }
@@ -71,18 +73,18 @@ export default function CreateDiscountModal({ visible, onClose, onSuccess }: Cre
   const handleCreate = async () => {
     // Validation
     if (!selectedCustomer) {
-      Alert.alert('Hata', 'Lütfen bir müşteri seçin');
+      Alert.alert(t('createDiscountModal.error'), t('createDiscountModal.selectCustomer'));
       return;
     }
 
     const percentageNum = parseFloat(percentage);
     if (!percentage || isNaN(percentageNum) || percentageNum <= 0 || percentageNum > 100) {
-      Alert.alert('Hata', 'Lütfen geçerli bir indirim yüzdesi girin (1-100)');
+      Alert.alert(t('createDiscountModal.error'), t('createDiscountModal.validPercentage'));
       return;
     }
 
     if (expiryDate <= new Date()) {
-      Alert.alert('Hata', 'Son kullanma tarihi gelecekte olmalı');
+      Alert.alert(t('createDiscountModal.error'), t('createDiscountModal.futureDate'));
       return;
     }
 
@@ -101,13 +103,13 @@ export default function CreateDiscountModal({ visible, onClose, onSuccess }: Cre
         createdAt: serverTimestamp(),
       });
 
-      Alert.alert('Başarılı', 'İndirim oluşturuldu!');
+      Alert.alert(t('createDiscountModal.success'), t('createDiscountModal.discountCreated'));
       onSuccess();
       resetForm();
       onClose();
     } catch (error) {
       console.error('Error creating discount:', error);
-      Alert.alert('Hata', 'İndirim oluşturulamadı');
+      Alert.alert(t('createDiscountModal.error'), t('createDiscountModal.createError'));
     } finally {
       setLoading(false);
     }
@@ -134,7 +136,7 @@ export default function CreateDiscountModal({ visible, onClose, onSuccess }: Cre
       <View style={styles.overlay}>
         <View style={styles.modal}>
           <View style={styles.header}>
-            <Text style={styles.title}>Yeni İndirim Oluştur</Text>
+            <Text style={styles.title}>{t('createDiscountModal.title')}</Text>
             <TouchableOpacity onPress={handleClose}>
               <Text style={styles.closeButton}>✕</Text>
             </TouchableOpacity>
@@ -143,9 +145,9 @@ export default function CreateDiscountModal({ visible, onClose, onSuccess }: Cre
           <ScrollView style={styles.content}>
             {/* Customer Selection */}
             <View style={styles.formGroup}>
-              <Text style={styles.label}>Müşteri *</Text>
+              <Text style={styles.label}>{t('createDiscountModal.customer')} {t('createDiscountModal.required')}</Text>
               {loadingCustomers ? (
-                <Text style={styles.loadingText}>Müşteriler yükleniyor...</Text>
+                <Text style={styles.loadingText}>{t('createDiscountModal.loadingCustomers')}</Text>
               ) : (
                 <ScrollView style={styles.customerList} nestedScrollEnabled>
                   {customers.map((customer) => (
@@ -165,7 +167,7 @@ export default function CreateDiscountModal({ visible, onClose, onSuccess }: Cre
                     </TouchableOpacity>
                   ))}
                   {customers.length === 0 && (
-                    <Text style={styles.emptyText}>Müşteri bulunamadı</Text>
+                    <Text style={styles.emptyText}>{t('createDiscountModal.noCustomers')}</Text>
                   )}
                 </ScrollView>
               )}
@@ -173,23 +175,23 @@ export default function CreateDiscountModal({ visible, onClose, onSuccess }: Cre
 
             {/* Discount Percentage */}
             <View style={styles.formGroup}>
-              <Text style={styles.label}>İndirim Yüzdesi (%) *</Text>
+              <Text style={styles.label}>{t('createDiscountModal.discountPercentage')} {t('createDiscountModal.required')}</Text>
               <TextInput
                 style={styles.input}
                 value={percentage}
                 onChangeText={setPercentage}
-                placeholder="Örn: 10"
+                placeholder={t('createDiscountModal.percentagePlaceholder')}
                 keyboardType="numeric"
                 maxLength={3}
               />
               {percentage && (parseFloat(percentage) > 100 || parseFloat(percentage) <= 0) && (
-                <Text style={styles.errorText}>1-100 arası bir değer girin</Text>
+                <Text style={styles.errorText}>{t('createDiscountModal.percentageError')}</Text>
               )}
             </View>
 
             {/* Expiry Date */}
             <View style={styles.formGroup}>
-              <Text style={styles.label}>Son Kullanma Tarihi *</Text>
+              <Text style={styles.label}>{t('createDiscountModal.expiryDate')} {t('createDiscountModal.required')}</Text>
               <TouchableOpacity
                 style={styles.dateButton}
                 onPress={() => setShowDatePicker(true)}
@@ -219,17 +221,17 @@ export default function CreateDiscountModal({ visible, onClose, onSuccess }: Cre
             {/* Summary */}
             {selectedCustomer && percentage && (
               <View style={styles.summary}>
-                <Text style={styles.summaryTitle}>Özet</Text>
+                <Text style={styles.summaryTitle}>{t('createDiscountModal.summary')}</Text>
                 <Text style={styles.summaryText}>
-                  <Text style={styles.summaryLabel}>Müşteri: </Text>
+                  <Text style={styles.summaryLabel}>{t('createDiscountModal.summaryCustomer')}: </Text>
                   {selectedCustomer.name}
                 </Text>
                 <Text style={styles.summaryText}>
-                  <Text style={styles.summaryLabel}>İndirim: </Text>
+                  <Text style={styles.summaryLabel}>{t('createDiscountModal.summaryDiscount')}: </Text>
                   %{percentage}
                 </Text>
                 <Text style={styles.summaryText}>
-                  <Text style={styles.summaryLabel}>Geçerlilik: </Text>
+                  <Text style={styles.summaryLabel}>{t('createDiscountModal.summaryValidity')}: </Text>
                   {expiryDate.toLocaleDateString('tr-TR')}
                 </Text>
               </View>
@@ -242,7 +244,7 @@ export default function CreateDiscountModal({ visible, onClose, onSuccess }: Cre
               onPress={handleClose}
               disabled={loading}
             >
-              <Text style={styles.cancelButtonText}>İptal</Text>
+              <Text style={styles.cancelButtonText}>{t('createDiscountModal.cancel')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.button, styles.createButton, loading && styles.buttonDisabled]}
@@ -250,7 +252,7 @@ export default function CreateDiscountModal({ visible, onClose, onSuccess }: Cre
               disabled={loading}
             >
               <Text style={styles.createButtonText}>
-                {loading ? 'Oluşturuluyor...' : 'Oluştur'}
+                {loading ? t('createDiscountModal.creating') : t('createDiscountModal.create')}
               </Text>
             </TouchableOpacity>
           </View>

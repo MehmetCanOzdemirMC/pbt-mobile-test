@@ -12,6 +12,7 @@ import {
   FlatList,
   ActivityIndicator,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { collection, addDoc, serverTimestamp, query, where, getDocs, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '../config/firebase';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -42,6 +43,7 @@ interface StockDiscountModalProps {
 }
 
 export default function StockDiscountModal({ visible, onClose, onSuccess }: StockDiscountModalProps) {
+  const { t } = useTranslation();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [percentage, setPercentage] = useState('');
@@ -119,7 +121,7 @@ export default function StockDiscountModal({ visible, onClose, onSuccess }: Stoc
       setCustomers(customersList);
     } catch (error) {
       console.error('Error loading customers:', error);
-      Alert.alert('Hata', 'Müşteriler yüklenemedi');
+      Alert.alert(t('stockDiscountModal.error'), t('stockDiscountModal.loadCustomersError'));
     } finally {
       setLoadingCustomers(false);
     }
@@ -128,23 +130,23 @@ export default function StockDiscountModal({ visible, onClose, onSuccess }: Stoc
   const handleCreate = async () => {
     // Validation
     if (!selectedCustomer) {
-      Alert.alert('Hata', 'Lütfen bir müşteri seçin');
+      Alert.alert(t('stockDiscountModal.error'), t('stockDiscountModal.selectCustomer'));
       return;
     }
 
     const percentageNum = parseFloat(percentage);
     if (!percentage || isNaN(percentageNum) || percentageNum <= 0 || percentageNum > 100) {
-      Alert.alert('Hata', 'Lütfen geçerli bir indirim yüzdesi girin (1-100)');
+      Alert.alert(t('stockDiscountModal.error'), t('stockDiscountModal.validPercentage'));
       return;
     }
 
     if (endDate <= startDate) {
-      Alert.alert('Hata', 'Bitiş tarihi başlangıç tarihinden sonra olmalı');
+      Alert.alert(t('stockDiscountModal.error'), t('stockDiscountModal.endDateError'));
       return;
     }
 
     if (selectedStoneIds.size === 0) {
-      Alert.alert('Hata', 'Lütfen en az bir taş seçin');
+      Alert.alert(t('stockDiscountModal.error'), t('stockDiscountModal.selectAtLeastOne'));
       return;
     }
 
@@ -174,13 +176,13 @@ export default function StockDiscountModal({ visible, onClose, onSuccess }: Stoc
         updatedAt: serverTimestamp(),
       });
 
-      Alert.alert('Başarılı', 'İndirim oluşturuldu!');
+      Alert.alert(t('stockDiscountModal.success'), t('stockDiscountModal.discountCreated'));
       onSuccess();
       resetForm();
       onClose();
     } catch (error) {
       console.error('Error creating discount:', error);
-      Alert.alert('Hata', 'İndirim oluşturulamadı');
+      Alert.alert(t('stockDiscountModal.error'), t('stockDiscountModal.createError'));
     } finally {
       setLoading(false);
     }
@@ -258,7 +260,7 @@ export default function StockDiscountModal({ visible, onClose, onSuccess }: Stoc
       <View style={styles.overlay}>
         <View style={styles.modal}>
           <View style={styles.header}>
-            <Text style={styles.title}>Stok İndirimi Oluştur</Text>
+            <Text style={styles.title}>{t('stockDiscountModal.title')}</Text>
             <TouchableOpacity onPress={handleClose}>
               <Text style={styles.closeButton}>✕</Text>
             </TouchableOpacity>
@@ -269,9 +271,9 @@ export default function StockDiscountModal({ visible, onClose, onSuccess }: Stoc
               <>
                 {/* Customer Selection */}
                 <View style={styles.formGroup}>
-                  <Text style={styles.label}>Müşteri *</Text>
+                  <Text style={styles.label}>{t('stockDiscountModal.customer')} {t('stockDiscountModal.required')}</Text>
                   {loadingCustomers ? (
-                    <Text style={styles.loadingText}>Müşteriler yükleniyor...</Text>
+                    <Text style={styles.loadingText}>{t('stockDiscountModal.loadingCustomers')}</Text>
                   ) : (
                     <ScrollView style={styles.customerList} nestedScrollEnabled>
                       {customers.map((customer) => (
@@ -291,7 +293,7 @@ export default function StockDiscountModal({ visible, onClose, onSuccess }: Stoc
                         </TouchableOpacity>
                       ))}
                       {customers.length === 0 && (
-                        <Text style={styles.emptyText}>Müşteri bulunamadı</Text>
+                        <Text style={styles.emptyText}>{t('stockDiscountModal.noCustomers')}</Text>
                       )}
                     </ScrollView>
                   )}
@@ -299,23 +301,23 @@ export default function StockDiscountModal({ visible, onClose, onSuccess }: Stoc
 
                 {/* Discount Percentage */}
                 <View style={styles.formGroup}>
-                  <Text style={styles.label}>İndirim Yüzdesi (%) *</Text>
+                  <Text style={styles.label}>{t('stockDiscountModal.discountPercentage')} {t('stockDiscountModal.required')}</Text>
                   <TextInput
                     style={styles.input}
                     value={percentage}
                     onChangeText={setPercentage}
-                    placeholder="Örn: 5"
+                    placeholder={t('stockDiscountModal.percentagePlaceholder')}
                     keyboardType="numeric"
                     maxLength={3}
                   />
                   {percentage && (parseFloat(percentage) > 100 || parseFloat(percentage) <= 0) && (
-                    <Text style={styles.errorText}>1-100 arası bir değer girin</Text>
+                    <Text style={styles.errorText}>{t('stockDiscountModal.percentageError')}</Text>
                   )}
                 </View>
 
                 {/* Start Date */}
                 <View style={styles.formGroup}>
-                  <Text style={styles.label}>Başlangıç Tarihi *</Text>
+                  <Text style={styles.label}>{t('stockDiscountModal.startDate')} {t('stockDiscountModal.required')}</Text>
                   <TouchableOpacity
                     style={styles.dateButton}
                     onPress={() => setShowStartDatePicker(true)}
@@ -344,7 +346,7 @@ export default function StockDiscountModal({ visible, onClose, onSuccess }: Stoc
 
                 {/* End Date */}
                 <View style={styles.formGroup}>
-                  <Text style={styles.label}>Bitiş Tarihi *</Text>
+                  <Text style={styles.label}>{t('stockDiscountModal.endDate')} {t('stockDiscountModal.required')}</Text>
                   <TouchableOpacity
                     style={styles.dateButton}
                     onPress={() => setShowEndDatePicker(true)}
@@ -374,14 +376,14 @@ export default function StockDiscountModal({ visible, onClose, onSuccess }: Stoc
                 {/* Selected Stones Count */}
                 <View style={styles.selectionInfo}>
                   <Text style={styles.selectionText}>
-                    {selectedStoneIds.size} taş seçildi
+                    {t('stockDiscountModal.stonesSelected', { count: selectedStoneIds.size })}
                   </Text>
                   <TouchableOpacity
                     style={styles.selectStonesButton}
                     onPress={() => setShowStoneSelection(true)}
                   >
                     <Text style={styles.selectStonesButtonText}>
-                      {selectedStoneIds.size > 0 ? 'Taşları Düzenle' : 'Taş Seç'}
+                      {selectedStoneIds.size > 0 ? t('stockDiscountModal.editStones') : t('stockDiscountModal.selectStones')}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -390,9 +392,9 @@ export default function StockDiscountModal({ visible, onClose, onSuccess }: Stoc
               <>
                 {/* Stone Selection View */}
                 <View style={styles.stoneSelectionHeader}>
-                  <Text style={styles.sectionTitle}>Taş Seçimi</Text>
+                  <Text style={styles.sectionTitle}>{t('stockDiscountModal.stoneSelection')}</Text>
                   <TouchableOpacity onPress={() => setShowStoneSelection(false)}>
-                    <Text style={styles.backButton}>← Geri</Text>
+                    <Text style={styles.backButton}>← {t('stockDiscountModal.back')}</Text>
                   </TouchableOpacity>
                 </View>
 
@@ -402,25 +404,25 @@ export default function StockDiscountModal({ visible, onClose, onSuccess }: Stoc
                     style={[styles.input, styles.filterInput]}
                     value={filterCarat}
                     onChangeText={(text) => setFilterCarat(text.replace(',', '.'))}
-                    placeholder="Karat ara..."
+                    placeholder={t('stockDiscountModal.searchCarat')}
                     keyboardType="decimal-pad"
                   />
                   <TextInput
                     style={[styles.input, styles.filterInput]}
                     value={filterShape}
                     onChangeText={setFilterShape}
-                    placeholder="Şekil ara..."
+                    placeholder={t('stockDiscountModal.searchShape')}
                   />
                 </View>
 
                 {/* Toggle All */}
                 <View style={styles.toggleAllRow}>
                   <Text style={styles.resultCount}>
-                    {filteredStones.length} taş bulundu
+                    {t('stockDiscountModal.stonesFound', { count: filteredStones.length })}
                   </Text>
                   <TouchableOpacity onPress={toggleAllStones}>
                     <Text style={styles.toggleAllButton}>
-                      {selectedStoneIds.size === filteredStones.length ? 'Hiçbirini Seçme' : 'Tümünü Seç'}
+                      {selectedStoneIds.size === filteredStones.length ? t('stockDiscountModal.selectNone') : t('stockDiscountModal.selectAll')}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -435,7 +437,7 @@ export default function StockDiscountModal({ visible, onClose, onSuccess }: Stoc
                     renderItem={renderStoneItem}
                     style={styles.stoneList}
                     ListEmptyComponent={
-                      <Text style={styles.emptyText}>Taş bulunamadı</Text>
+                      <Text style={styles.emptyText}>{t('stockDiscountModal.noStones')}</Text>
                     }
                   />
                 )}
@@ -449,7 +451,7 @@ export default function StockDiscountModal({ visible, onClose, onSuccess }: Stoc
               onPress={handleClose}
               disabled={loading}
             >
-              <Text style={styles.cancelButtonText}>İptal</Text>
+              <Text style={styles.cancelButtonText}>{t('stockDiscountModal.cancel')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.button, styles.createButton, loading && styles.buttonDisabled]}
@@ -457,7 +459,7 @@ export default function StockDiscountModal({ visible, onClose, onSuccess }: Stoc
               disabled={loading || !selectedCustomer || !percentage || selectedStoneIds.size === 0}
             >
               <Text style={styles.createButtonText}>
-                {loading ? 'Oluşturuluyor...' : 'Oluştur'}
+                {loading ? t('stockDiscountModal.creating') : t('stockDiscountModal.create')}
               </Text>
             </TouchableOpacity>
           </View>
