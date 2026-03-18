@@ -97,11 +97,15 @@ export const useFavoritesStore = create<FavoritesState>((set, get) => ({
 
       // Remove from Firestore
       const favoritesRef = doc(db, 'favorites', user.uid);
-      await updateDoc(favoritesRef, {
-        items: arrayRemove(itemToRemove),
-      });
+      const favoritesDoc = await getDoc(favoritesRef);
 
-      // Update local state
+      if (favoritesDoc.exists()) {
+        await updateDoc(favoritesRef, {
+          items: arrayRemove(itemToRemove),
+        });
+      }
+
+      // Update local state (always update local state even if Firestore doc doesn't exist)
       set((state) => ({
         favorites: state.favorites.filter((item) => item.id !== stoneId),
       }));

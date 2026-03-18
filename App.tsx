@@ -4,8 +4,8 @@ import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { signInWithEmailAndPassword, onAuthStateChanged, signOut } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { signInWithEmailAndPassword, onAuthStateChanged, signOut, GoogleAuthProvider, signInWithCredential } from 'firebase/auth';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { auth, db } from './config/firebase';
@@ -13,7 +13,11 @@ import { initializeFirebaseAppCheck } from './config/appCheck';
 import { initializeSentry, setSentryUser } from './config/sentry';
 // import { useNotifications } from './hooks/useNotifications'; // Disabled for Expo Go
 import OnboardingScreen from './screens/OnboardingScreen';
-import { trackLogin, setAnalyticsUserId } from './services/analyticsService';
+import { trackLogin, setAnalyticsUserId, trackSignUp } from './services/analyticsService';
+import * as Google from 'expo-auth-session/providers/google';
+import * as WebBrowser from 'expo-web-browser';
+
+WebBrowser.maybeCompleteAuthSession();
 
 // Initialize security and monitoring on app startup
 initializeSentry();
@@ -58,7 +62,7 @@ const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
 // Login Form Component (with translations)
-function LoginForm({ email, setEmail, password, setPassword, handleLogin, loading }: any) {
+function LoginForm({ email, setEmail, password, setPassword, handleLogin, handleGoogleLogin, loading }: any) {
   const { t } = useTranslation();
 
   return (
@@ -95,6 +99,23 @@ function LoginForm({ email, setEmail, password, setPassword, handleLogin, loadin
         ) : (
           <Text style={styles.buttonText}>{t('auth.login')}</Text>
         )}
+      </TouchableOpacity>
+
+      {/* Divider */}
+      <View style={styles.divider}>
+        <View style={styles.dividerLine} />
+        <Text style={styles.dividerText}>OR</Text>
+        <View style={styles.dividerLine} />
+      </View>
+
+      {/* Google Sign-In Button */}
+      <TouchableOpacity
+        style={[styles.googleButton, loading && styles.buttonDisabled]}
+        onPress={handleGoogleLogin}
+        disabled={loading}
+      >
+        <Text style={styles.googleIcon}>G</Text>
+        <Text style={styles.googleButtonText}>Continue with Google</Text>
       </TouchableOpacity>
 
       <Text style={styles.note}>
@@ -518,6 +539,11 @@ export default function App() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [checkingOnboarding, setCheckingOnboarding] = useState(true);
 
+  // Google OAuth configuration
+  const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
+    clientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '',
+  });
+
   // Check onboarding status
   useEffect(() => {
     const checkOnboarding = async () => {
@@ -533,6 +559,14 @@ export default function App() {
 
     checkOnboarding();
   }, []);
+
+  // Google OAuth response handler
+  useEffect(() => {
+    if (response?.type === 'success') {
+      const { id_token } = response.params;
+      handleGoogleAuthResponse(id_token);
+    }
+  }, [response]);
 
   // Auth state listener
   useEffect(() => {
@@ -556,6 +590,71 @@ export default function App() {
 
     return unsubscribe;
   }, []);
+
+  const handleGoogleAuthResponse = async (idToken: string) => {
+    setLoading(true);
+    try {
+      // Create Google credential with ID token
+      const credential = GoogleAuthProvider.credential(idToken);
+
+      // Sign in with credential
+      const result = await signInWithCredential(auth, credential);
+      const user = result.user;
+
+      // Check if user document exists in Firestore
+      const userRef = doc(db, 'users', user.uid);
+      const userSnap = await getDoc(userRef);
+
+      if (!userSnap.exists()) {
+        // NEW USER: Create user document
+        const displayNameParts = user.displayName?.split(' ') || ['', ''];
+        const firstName = displayNameParts[0] || '';
+        const lastName = displayNameParts.slice(1).join(' ') || '';
+
+        await setDoc(userRef, {
+          email: user.email,
+          name: firstName,
+          surname: lastName,
+          role: 'retailer', // Default role
+          companyName: '',
+          mobileNumber: '',
+          profilePhoto: user.photoURL || '',
+          createdAt: serverTimestamp(),
+          lastLoginAt: serverTimestamp(),
+          authProvider: 'google',
+        });
+
+        // Track sign up
+        trackSignUp('google');
+        setAnalyticsUserId(user.uid);
+
+        Alert.alert('Hoş Geldiniz!', 'Hesabınız oluşturuldu. Lütfen profil bilgilerinizi tamamlayın.', [
+          { text: 'Tamam', onPress: () => console.log('New Google user') }
+        ]);
+      } else {
+        // EXISTING USER: Just track login
+        trackLogin('google');
+        setAnalyticsUserId(user.uid);
+
+        Alert.alert('Başarılı', 'Google ile giriş yapıldı!');
+      }
+
+    } catch (error: any) {
+      console.error('Google Auth error:', error);
+      Alert.alert('Hata', error.message || 'Google ile giriş başarısız');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    try {
+      await promptAsync();
+    } catch (error: any) {
+      console.error('Google Login error:', error);
+      Alert.alert('Hata', 'Google ile giriş başlatılamadı');
+    }
+  };
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -640,6 +739,7 @@ export default function App() {
               password={password}
               setPassword={setPassword}
               handleLogin={handleLogin}
+              handleGoogleLogin={handleGoogleLogin}
               loading={loading}
             />
           </View>
@@ -710,6 +810,43 @@ const styles = StyleSheet.create({
     color: '#999',
     textAlign: 'center',
     marginTop: 16,
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 20,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#ddd',
+  },
+  dividerText: {
+    marginHorizontal: 12,
+    fontSize: 12,
+    color: '#999',
+    fontWeight: '500',
+  },
+  googleButton: {
+    backgroundColor: 'white',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  googleIcon: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginRight: 12,
+    color: '#4285F4',
+  },
+  googleButtonText: {
+    color: '#333',
+    fontSize: 16,
+    fontWeight: '500',
   },
   userInfoContainer: {
     width: '100%',

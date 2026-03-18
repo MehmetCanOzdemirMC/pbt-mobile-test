@@ -23,6 +23,7 @@ import ScreenWrapper from '../components/ScreenWrapper';
 import { useTheme } from '../context/ThemeContext';
 import { parseSearchWithGemini, applyGeminiFilters } from '../utils/geminiSearch';
 import { trackScreenView } from '../services/analyticsService';
+import { auth } from '../config/firebase';
 
 type RootStackParamList = {
   Home: undefined;
@@ -85,12 +86,28 @@ export default function MarketplaceScreen() {
     applyFilters: applyMarketplaceFilters,
   } = useMarketplaceStore();
 
-  // Load diamonds on mount
+  // Load diamonds on mount (wait for auth to be ready)
   useEffect(() => {
-    console.log('📱 MarketplaceScreen: Loading diamonds...');
-    loadDiamonds();
-    loadCart();
-    loadFavorites();
+    // Check if user is authenticated before loading
+    const user = auth.currentUser;
+    if (user) {
+      console.log('📱 MarketplaceScreen: Loading diamonds for user:', user.uid);
+      loadDiamonds();
+      loadCart();
+      loadFavorites();
+    } else {
+      console.warn('📱 MarketplaceScreen: User not authenticated yet, will retry...');
+      // Retry after 500ms (auth might still be initializing)
+      const timer = setTimeout(() => {
+        if (auth.currentUser) {
+          console.log('📱 MarketplaceScreen: Auth ready, loading now...');
+          loadDiamonds();
+          loadCart();
+          loadFavorites();
+        }
+      }, 500);
+      return () => clearTimeout(timer);
+    }
   }, []);
 
   // Track screen view

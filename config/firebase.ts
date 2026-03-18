@@ -23,8 +23,8 @@ export const db = getFirestore(app);
 export const storage = getStorage(app);
 
 // Initialize Firebase Analytics
-// For React Native (iOS/Android): use @react-native-firebase/analytics
-// For Web: use firebase/analytics
+// NOTE: Analytics only works on Web in Expo Go (managed workflow)
+// For production React Native (iOS/Android), you need a development build with @react-native-firebase/analytics
 let analytics: any = null;
 
 try {
@@ -33,13 +33,13 @@ try {
     analytics = getAnalytics(app);
     console.log('✅ Firebase Analytics initialized (Web)');
   } else {
-    // For React Native, use @react-native-firebase/analytics
-    const rnAnalytics = require('@react-native-firebase/analytics').default;
-    analytics = rnAnalytics();
-    console.log('✅ Firebase Analytics initialized (React Native)');
+    // EXPO GO: Analytics not available on React Native (requires development build)
+    // For now, analytics will be null on mobile (events won't be tracked)
+    console.log('ℹ️ Firebase Analytics skipped (Expo Go - managed workflow)');
+    console.log('ℹ️ To enable analytics on mobile, create a development build');
   }
-} catch (error) {
-  console.error('⚠️ Firebase Analytics initialization error:', error);
+} catch (error: any) {
+  console.warn('⚠️ Firebase Analytics initialization skipped:', error?.message || error);
 }
 
 export { analytics };
