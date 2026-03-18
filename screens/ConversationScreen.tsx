@@ -228,8 +228,11 @@ export default function ConversationScreen() {
       const response = await fetch(uri);
       const blob = await response.blob();
 
-      // Create storage reference
-      const storageRef = ref(storage, `messages/${conversationId}/${Date.now()}_${fileName}`);
+      // Create storage reference with userId (matches storage.rules pattern)
+      const userId = auth.currentUser?.uid;
+      if (!userId) throw new Error('User not authenticated');
+
+      const storageRef = ref(storage, `messages/${conversationId}/${userId}/${Date.now()}_${fileName}`);
 
       // Upload file
       await uploadBytes(storageRef, blob);

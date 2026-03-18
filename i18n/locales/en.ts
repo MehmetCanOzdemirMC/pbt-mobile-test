@@ -200,6 +200,25 @@ export default {
     typing: 'typing...',
   },
 
+  // Conversation (Chat)
+  conversation: {
+    typeMessage: 'Type a message...',
+    send: 'Send',
+    cancel: 'Cancel',
+    selectImage: 'Select Photo',
+    selectFile: 'Select File',
+    uploading: 'Uploading...',
+    uploadError: 'Upload failed',
+    imagePickerError: 'Failed to pick image',
+    documentPickerError: 'Failed to pick document',
+    sendError: 'Failed to send message',
+    error: 'Error',
+    messageSendError: 'Failed to send message',
+    permissionRequired: 'Permission Required',
+    galleryPermissionMessage: 'We need permission to access your photo gallery',
+    documentPermissionMessage: 'We need permission to access your files',
+  },
+
   // Profile
   profile: {
     title: 'Profile',

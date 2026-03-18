@@ -9,7 +9,7 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { useCartStore } from '../stores/cartStore';
 import { useMessagingStore } from '../stores/messagingStore';
@@ -17,6 +17,7 @@ import { auth, db } from '../config/firebase';
 import { collection, addDoc, doc, updateDoc, serverTimestamp, writeBatch, getDoc, setDoc } from 'firebase/firestore';
 import ScreenWrapper from '../components/ScreenWrapper';
 import { useTheme } from '../context/ThemeContext';
+import { trackScreenView, trackBeginCheckout, trackPurchase } from '../services/analyticsService';
 
 export default function CheckoutScreen() {
   const { t } = useTranslation();
@@ -29,6 +30,25 @@ export default function CheckoutScreen() {
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Track screen view
+  useFocusEffect(
+    React.useCallback(() => {
+      trackScreenView('Checkout', 'CheckoutScreen');
+      // Track begin checkout
+      if (cart.length > 0) {
+        trackBeginCheckout(
+          totalPrice,
+          cart.map(item => ({
+            item_id: item.id,
+            item_name: `${item.shape} ${item.carat}ct ${item.color} ${item.clarity}`,
+            price: item.totalPrice,
+            quantity: 1,
+          }))
+        );
+      }
+    }, [cart.length, totalPrice])
+  );
 
   const handleCreateOrder = async () => {
     if (!deliveryAddress.trim()) {
@@ -174,25 +194,25 @@ export default function CheckoutScreen() {
       for (const { orderId, items } of results) {
         for (const item of items) {
           try {
-            // item.stoneId now contains Firestore document ID (after our fix)
-            // item.id now contains numeric ID
-            const stoneRef = doc(db, 'stones', item.stoneId);
+            // item.id = Firestore document ID
+            // item.stoneId = Supplier's stone ID (for display)
+            const stoneRef = doc(db, 'stones', item.id);
 
             // First, check current stone status
             const stoneDoc = await getDoc(stoneRef);
             if (!stoneDoc.exists()) {
-              console.error('Stone not found:', item.stoneId);
-              unavailableStones.push(item.id); // Show numeric ID to user
+              console.error('Stone not found (Firestore ID):', item.id, 'Supplier ID:', item.stoneId);
+              unavailableStones.push(item.stoneId); // Show supplier ID to user
               continue; // Skip this stone
             }
 
             const currentStatus = stoneDoc.data()?.status || 'unknown';
-            console.log('Stone current status before reserve:', item.stoneId, currentStatus);
+            console.log('Stone current status before reserve:', item.id, 'Supplier ID:', item.stoneId, 'Status:', currentStatus);
 
             // Check if stone is available
             if (currentStatus !== 'available') {
-              console.warn('Stone not available:', item.stoneId, 'Status:', currentStatus);
-              unavailableStones.push(item.id); // Show numeric ID to user
+              console.warn('Stone not available. Firestore ID:', item.id, 'Supplier ID:', item.stoneId, 'Status:', currentStatus);
+              unavailableStones.push(item.stoneId); // Show supplier ID to user
               continue; // Skip this stone, don't try to reserve it
             }
 
@@ -203,11 +223,11 @@ export default function CheckoutScreen() {
               reservedAt: serverTimestamp(),
               orderId: orderId,
             });
-            console.log('✅ Stone reserved successfully:', item.stoneId);
+            console.log('✅ Stone reserved successfully. Firestore ID:', item.id, 'Supplier ID:', item.stoneId);
 
           } catch (error: any) {
-            console.error('❌ Error reserving stone:', item.stoneId, error.message);
-            unavailableStones.push(item.id); // Show numeric ID to user
+            console.error('❌ Error reserving stone. Firestore ID:', item.id, 'Supplier ID:', item.stoneId, 'Error:', error.message);
+            unavailableStones.push(item.stoneId); // Show supplier ID to user
             // Continue with other stones instead of stopping
           }
         }
@@ -224,23 +244,23 @@ export default function CheckoutScreen() {
       // STEP 3: Clear cart fields (only for successfully reserved stones)
       for (const { items } of results) {
         for (const item of items) {
-          // Skip if this stone was unavailable (item.id is numeric ID)
-          if (unavailableStones.includes(item.id)) {
-            console.log('Skipping cart clear for unavailable stone:', item.id);
+          // Skip if this stone was unavailable (item.stoneId is supplier ID)
+          if (unavailableStones.includes(item.stoneId)) {
+            console.log('Skipping cart clear for unavailable stone. Supplier ID:', item.stoneId);
             continue;
           }
 
           try {
-            // item.stoneId is now Firestore document ID
-            const stoneRef = doc(db, 'stones', item.stoneId);
+            // item.id is Firestore document ID
+            const stoneRef = doc(db, 'stones', item.id);
             await updateDoc(stoneRef, {
               inCarts: [],
               cartCount: 0,
               cartDetails: {},
             });
-            console.log('✅ Cart fields cleared:', item.stoneId);
+            console.log('✅ Cart fields cleared. Firestore ID:', item.id, 'Supplier ID:', item.stoneId);
           } catch (error) {
-            console.error('❌ Error clearing cart fields:', item.stoneId, error);
+            console.error('❌ Error clearing cart fields. Firestore ID:', item.id, 'Supplier ID:', item.stoneId, 'Error:', error);
           }
         }
       }
@@ -331,6 +351,22 @@ export default function CheckoutScreen() {
       }
 
       console.log('🎉 Sipariş başarıyla tamamlandı!');
+
+      // Track purchase in analytics
+      const allItems = results.flatMap(r => r.items);
+      const grandTotal = allItems.reduce((sum, item) => sum + item.totalPrice, 0);
+      const firstOrderId = results[0]?.orderId || '';
+
+      trackPurchase(
+        firstOrderId,
+        grandTotal,
+        allItems.map(item => ({
+          item_id: item.id,
+          item_name: `${item.shape} ${item.carat}ct ${item.color} ${item.clarity}`,
+          price: item.totalPrice,
+          quantity: 1,
+        }))
+      );
 
       // Navigate to conversation with first supplier
       const firstConversationId = conversationIds[0];

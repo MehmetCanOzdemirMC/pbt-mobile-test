@@ -200,6 +200,25 @@ export default {
     typing: '正在输入...',
   },
 
+  // Conversation (Chat)
+  conversation: {
+    typeMessage: '输入消息...',
+    send: '发送',
+    cancel: '取消',
+    selectImage: '选择照片',
+    selectFile: '选择文件',
+    uploading: '上传中...',
+    uploadError: '上传失败',
+    imagePickerError: '选择图片失败',
+    documentPickerError: '选择文档失败',
+    sendError: '发送失败',
+    error: '错误',
+    messageSendError: '发送消息失败',
+    permissionRequired: '需要权限',
+    galleryPermissionMessage: '我们需要访问您的照片库的权限',
+    documentPermissionMessage: '我们需要访问您的文件的权限',
+  },
+
   // Profile
   profile: {
     title: '个人资料',

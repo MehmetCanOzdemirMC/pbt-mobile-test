@@ -200,6 +200,25 @@ export default {
     typing: 'yazıyor...',
   },
 
+  // Conversation (Chat)
+  conversation: {
+    typeMessage: 'Mesaj yazın...',
+    send: 'Gönder',
+    cancel: 'İptal',
+    selectImage: 'Fotoğraf Seç',
+    selectFile: 'Dosya Seç',
+    uploading: 'Yükleniyor...',
+    uploadError: 'Yükleme başarısız',
+    imagePickerError: 'Fotoğraf seçilemedi',
+    documentPickerError: 'Dosya seçilemedi',
+    sendError: 'Mesaj gönderilemedi',
+    error: 'Hata',
+    messageSendError: 'Mesaj gönderilemedi',
+    permissionRequired: 'İzin Gerekli',
+    galleryPermissionMessage: 'Fotoğraf galerisine erişim izni vermeniz gerekiyor',
+    documentPermissionMessage: 'Dosyalara erişim izni vermeniz gerekiyor',
+  },
+
   // Profile
   profile: {
     title: 'Profil',

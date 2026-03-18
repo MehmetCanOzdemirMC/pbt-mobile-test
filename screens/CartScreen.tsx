@@ -8,11 +8,12 @@ import {
   Alert,
   ActivityIndicator
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { useCartStore, CartItem } from '../stores/cartStore';
 import ScreenWrapper from '../components/ScreenWrapper';
 import { useTheme } from '../context/ThemeContext';
+import { trackScreenView } from '../services/analyticsService';
 
 export default function CartScreen() {
   const { t } = useTranslation();
@@ -24,6 +25,13 @@ export default function CartScreen() {
     loadCart();
     checkExpiry();
   }, []);
+
+  // Track screen view
+  useFocusEffect(
+    React.useCallback(() => {
+      trackScreenView('Cart', 'CartScreen');
+    }, [])
+  );
 
   const handleRemoveItem = async (stoneId: string) => {
     Alert.alert(

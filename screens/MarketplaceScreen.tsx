@@ -10,7 +10,7 @@ import {
   Alert,
   TextInput,
 } from 'react-native';
-import { useNavigation, NavigationProp } from '@react-navigation/native';
+import { useNavigation, NavigationProp, useFocusEffect } from '@react-navigation/native';
 import { Heart, Check, Clock, SlidersHorizontal } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useCartStore } from '../stores/cartStore';
@@ -22,6 +22,7 @@ import FilterSheet, { Filters, FilterSheetRef } from '../components/FilterSheet'
 import ScreenWrapper from '../components/ScreenWrapper';
 import { useTheme } from '../context/ThemeContext';
 import { parseSearchWithGemini, applyGeminiFilters } from '../utils/geminiSearch';
+import { trackScreenView } from '../services/analyticsService';
 
 type RootStackParamList = {
   Home: undefined;
@@ -91,6 +92,13 @@ export default function MarketplaceScreen() {
     loadCart();
     loadFavorites();
   }, []);
+
+  // Track screen view
+  useFocusEffect(
+    React.useCallback(() => {
+      trackScreenView('Marketplace', 'MarketplaceScreen');
+    }, [])
+  );
 
   // Apply filters when they change (with Gemini AI support)
   useEffect(() => {

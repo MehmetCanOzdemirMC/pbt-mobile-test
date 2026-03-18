@@ -12,7 +12,7 @@ import {
   Modal,
   Linking,
 } from 'react-native';
-import { useRoute, useNavigation } from '@react-navigation/native';
+import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCartStore } from '../stores/cartStore';
 import { doc, getDoc } from 'firebase/firestore';
@@ -21,7 +21,7 @@ import { db } from '../config/firebase';
 import { WebView } from 'react-native-webview';
 import { useTheme } from '../context/ThemeContext';
 import { fetchJtrMedia } from '../services/jtrService';
-import { trackViewItem, trackAddToCart } from '../services/analyticsService';
+import { trackViewItem, trackAddToCart, trackScreenView } from '../services/analyticsService';
 import { useTranslation } from 'react-i18next';
 
 const { width } = Dimensions.get('window');
@@ -55,6 +55,35 @@ interface Stone {
   image?: string;
   JTRCertificateNo?: string;
   reportNo?: string;
+  // Basic fields (from web)
+  lab?: string;
+  pbStockCode?: string;
+  customerRef?: string;
+  inclusion?: string;
+  keyToSymbol?: string;
+  // Advanced fields
+  milky?: string;
+  eyeClean?: string;
+  colorShade?: string;
+  depthPercent?: number;
+  tablePercent?: number;
+  girdle?: string;
+  // Advanced Gemology - Inclusion Details
+  blackTable?: string;
+  blackCrown?: string;
+  whiteTable?: string;
+  whiteCrown?: string;
+  openTable?: string;
+  openPavilion?: string;
+  openCrown?: string;
+  luster?: string;
+  heartAndArrow?: string;
+  // Advanced Gemology - Technical Measurements
+  crownAngle?: number;
+  crownHeight?: number;
+  pavilionAngle?: number;
+  pavilionHeight?: number;
+  culet?: string;
 }
 
 interface MediaData {
@@ -77,6 +106,8 @@ export default function DiamondDetailScreen() {
   const [pdfViewerVisible, setPdfViewerVisible] = useState(false);
   const [mediaData, setMediaData] = useState<MediaData>({ type: 'none', url: '' });
   const [isLoadingMedia, setIsLoadingMedia] = useState(true);
+  const [showMoreDetails, setShowMoreDetails] = useState(false);
+  const [showAdvancedGemology, setShowAdvancedGemology] = useState(false);
 
   const { addToCart, isInCart } = useCartStore();
   const inCart = stone ? isInCart(stone.id) : false;
@@ -84,6 +115,13 @@ export default function DiamondDetailScreen() {
   useEffect(() => {
     loadStoneDetails();
   }, [stoneId]);
+
+  // Track screen view
+  useFocusEffect(
+    React.useCallback(() => {
+      trackScreenView('Diamond Detail', 'DiamondDetailScreen');
+    }, [])
+  );
 
   // Load media (video/360°/image) when stone is loaded
   useEffect(() => {
@@ -214,6 +252,17 @@ export default function DiamondDetailScreen() {
         supplierName: stone.supplierName,
         addedAt: Date.now(),
       });
+
+      // Track add to cart in analytics
+      trackAddToCart({
+        item_id: stone.id,
+        item_name: `${stone.shape} ${stone.carat}ct ${stone.color} ${stone.clarity}`,
+        item_category: 'Diamond',
+        price: stone.totalPrice,
+        quantity: 1,
+        currency: 'USD',
+      });
+
       Alert.alert(t('common.success'), t('stoneDetail.addToCartSuccess'), [
         { text: t('stoneDetail.goToCart'), onPress: () => navigation.navigate('Cart' as never) },
         { text: t('common.confirm'), style: 'cancel' },
@@ -250,9 +299,9 @@ export default function DiamondDetailScreen() {
         {/* Media Viewer (Video/360°/Image) */}
         <View style={[styles.mediaContainer, { backgroundColor: theme.backgroundCard }]}>
           {isLoadingMedia ? (
-            <View style={styles.loadingContainer}>
+            <View style={styles.mediaLoadingContainer}>
               <ActivityIndicator size="large" color="#3b82f6" />
-              <Text style={[styles.loadingText, { color: theme.textSecondary }]}>{t('stoneDetail.loadingMedia')}</Text>
+              <Text style={[styles.mediaLoadingText, { color: theme.textSecondary }]}>{t('stoneDetail.loadingMedia')}</Text>
             </View>
           ) : mediaData.type === 'iframe' ? (
             <WebView
@@ -260,7 +309,7 @@ export default function DiamondDetailScreen() {
               style={styles.webView}
               startInLoadingState={true}
               renderLoading={() => (
-                <View style={styles.loadingContainer}>
+                <View style={styles.mediaLoadingContainer}>
                   <ActivityIndicator size="large" color="#3b82f6" />
                 </View>
               )}
@@ -351,6 +400,30 @@ export default function DiamondDetailScreen() {
                 <Text style={[styles.specValue, { color: theme.textPrimary }]}>{stone.fluorescence}</Text>
               </View>
             )}
+            {(stone.lab || stone.certification) && (
+              <View style={[styles.specItem, { backgroundColor: theme.backgroundCard }]}>
+                <Text style={[styles.specLabel, { color: theme.textSecondary }]}>Lab</Text>
+                <Text style={[styles.specValue, { color: theme.textPrimary }]}>{stone.lab || stone.certification}</Text>
+              </View>
+            )}
+            {stone.pbStockCode && (
+              <View style={[styles.specItem, { backgroundColor: theme.backgroundCard }]}>
+                <Text style={[styles.specLabel, { color: theme.textSecondary }]}>PB Stock Code</Text>
+                <Text style={[styles.specValue, { color: theme.textPrimary }]}>{stone.pbStockCode}</Text>
+              </View>
+            )}
+            {(stone.stoneId || stone.customerRef) && (
+              <View style={[styles.specItem, { backgroundColor: theme.backgroundCard }]}>
+                <Text style={[styles.specLabel, { color: theme.textSecondary }]}>Supplier Stone ID</Text>
+                <Text style={[styles.specValue, { color: theme.textPrimary }]}>{stone.stoneId || stone.customerRef}</Text>
+              </View>
+            )}
+            {(stone.inclusion || stone.keyToSymbol) && (
+              <View style={[styles.specItem, { backgroundColor: theme.backgroundCard }]}>
+                <Text style={[styles.specLabel, { color: theme.textSecondary }]}>Inclusion</Text>
+                <Text style={[styles.specValue, { color: theme.textPrimary }]}>{stone.inclusion || stone.keyToSymbol}</Text>
+              </View>
+            )}
           </View>
         </View>
 
@@ -379,6 +452,63 @@ export default function DiamondDetailScreen() {
           </View>
         </View>
 
+        {/* More Details Toggle Button */}
+        <View style={[styles.section, { borderBottomColor: theme.borderLight }]}>
+          <TouchableOpacity
+            style={[styles.toggleButton, { borderColor: theme.primary + '40' }]}
+            onPress={() => setShowMoreDetails(!showMoreDetails)}
+          >
+            <Text style={[styles.toggleButtonText, { color: theme.primary }]}>
+              {showMoreDetails ? '▲ Show Less' : '▼ More Details'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Advanced Fields (More Details Expanded) */}
+        {showMoreDetails && (
+          <View style={[styles.section, { borderBottomColor: theme.borderLight }]}>
+            <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Advanced Details</Text>
+            <View style={styles.specsGrid}>
+              {stone.milky && (
+                <View style={[styles.specItem, { backgroundColor: theme.backgroundCard }]}>
+                  <Text style={[styles.specLabel, { color: theme.textSecondary }]}>Milky</Text>
+                  <Text style={[styles.specValue, { color: theme.textPrimary }]}>{stone.milky}</Text>
+                </View>
+              )}
+              {stone.eyeClean && (
+                <View style={[styles.specItem, { backgroundColor: theme.backgroundCard }]}>
+                  <Text style={[styles.specLabel, { color: theme.textSecondary }]}>Eye Clean</Text>
+                  <Text style={[styles.specValue, { color: theme.textPrimary }]}>{stone.eyeClean}</Text>
+                </View>
+              )}
+              {stone.colorShade && (
+                <View style={[styles.specItem, { backgroundColor: theme.backgroundCard }]}>
+                  <Text style={[styles.specLabel, { color: theme.textSecondary }]}>Color Shade</Text>
+                  <Text style={[styles.specValue, { color: theme.textPrimary }]}>{stone.colorShade}</Text>
+                </View>
+              )}
+              {stone.depthPercent && (
+                <View style={[styles.specItem, { backgroundColor: theme.backgroundCard }]}>
+                  <Text style={[styles.specLabel, { color: theme.textSecondary }]}>Depth %</Text>
+                  <Text style={[styles.specValue, { color: theme.textPrimary }]}>{stone.depthPercent}%</Text>
+                </View>
+              )}
+              {stone.tablePercent && (
+                <View style={[styles.specItem, { backgroundColor: theme.backgroundCard }]}>
+                  <Text style={[styles.specLabel, { color: theme.textSecondary }]}>Table %</Text>
+                  <Text style={[styles.specValue, { color: theme.textPrimary }]}>{stone.tablePercent}%</Text>
+                </View>
+              )}
+              {stone.girdle && (
+                <View style={[styles.specItem, { backgroundColor: theme.backgroundCard }]}>
+                  <Text style={[styles.specLabel, { color: theme.textSecondary }]}>Girdle</Text>
+                  <Text style={[styles.specValue, { color: theme.textPrimary }]}>{stone.girdle}</Text>
+                </View>
+              )}
+            </View>
+          </View>
+        )}
+
         {/* Measurements */}
         {stone.measurements && (
           <View style={[styles.section, { borderBottomColor: theme.borderLight }]}>
@@ -400,6 +530,119 @@ export default function DiamondDetailScreen() {
           <View style={[styles.section, { borderBottomColor: theme.borderLight }]}>
             <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>{t('stoneDetail.description')}</Text>
             <Text style={[styles.description, { color: theme.textSecondary }]}>{stone.description}</Text>
+          </View>
+        )}
+
+        {/* Advanced Gemology Toggle Button */}
+        <View style={[styles.section, { borderBottomColor: theme.borderLight }]}>
+          <TouchableOpacity
+            style={[styles.toggleButton, styles.advancedGemologyButton]}
+            onPress={() => setShowAdvancedGemology(!showAdvancedGemology)}
+          >
+            <Text style={[styles.toggleButtonText, styles.advancedGemologyButtonText]}>
+              {showAdvancedGemology ? '▲ Hide Gemology' : '▼ Advanced Gemology'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Advanced Gemology Panel */}
+        {showAdvancedGemology && (
+          <View style={[styles.section, { borderBottomColor: theme.borderLight }]}>
+            <View style={styles.advancedGemologyPanel}>
+              {/* Inclusion Details */}
+              <Text style={styles.gemologySubtitle}>Inclusion Details</Text>
+              <View style={styles.gemologyGrid}>
+                {stone.blackTable && (
+                  <View style={styles.gemologyItem}>
+                    <Text style={styles.gemologyLabel}>Black Table</Text>
+                    <Text style={styles.gemologyValue}>{stone.blackTable}</Text>
+                  </View>
+                )}
+                {stone.blackCrown && (
+                  <View style={styles.gemologyItem}>
+                    <Text style={styles.gemologyLabel}>Black Crown</Text>
+                    <Text style={styles.gemologyValue}>{stone.blackCrown}</Text>
+                  </View>
+                )}
+                {stone.whiteTable && (
+                  <View style={styles.gemologyItem}>
+                    <Text style={styles.gemologyLabel}>White Table</Text>
+                    <Text style={styles.gemologyValue}>{stone.whiteTable}</Text>
+                  </View>
+                )}
+                {stone.whiteCrown && (
+                  <View style={styles.gemologyItem}>
+                    <Text style={styles.gemologyLabel}>White Crown</Text>
+                    <Text style={styles.gemologyValue}>{stone.whiteCrown}</Text>
+                  </View>
+                )}
+                {stone.openTable && (
+                  <View style={styles.gemologyItem}>
+                    <Text style={styles.gemologyLabel}>Open Table</Text>
+                    <Text style={styles.gemologyValue}>{stone.openTable}</Text>
+                  </View>
+                )}
+                {stone.openPavilion && (
+                  <View style={styles.gemologyItem}>
+                    <Text style={styles.gemologyLabel}>Open Pavilion</Text>
+                    <Text style={styles.gemologyValue}>{stone.openPavilion}</Text>
+                  </View>
+                )}
+                {stone.openCrown && (
+                  <View style={styles.gemologyItem}>
+                    <Text style={styles.gemologyLabel}>Open Crown</Text>
+                    <Text style={styles.gemologyValue}>{stone.openCrown}</Text>
+                  </View>
+                )}
+                {stone.luster && (
+                  <View style={styles.gemologyItem}>
+                    <Text style={styles.gemologyLabel}>Luster</Text>
+                    <Text style={styles.gemologyValue}>{stone.luster}</Text>
+                  </View>
+                )}
+                {stone.heartAndArrow && (
+                  <View style={styles.gemologyItem}>
+                    <Text style={styles.gemologyLabel}>Heart & Arrow</Text>
+                    <Text style={styles.gemologyValue}>{stone.heartAndArrow}</Text>
+                  </View>
+                )}
+              </View>
+
+              {/* Technical Measurements */}
+              <Text style={[styles.gemologySubtitle, { marginTop: 20 }]}>Technical Measurements</Text>
+              <View style={styles.gemologyGrid}>
+                {stone.crownAngle && (
+                  <View style={styles.gemologyItem}>
+                    <Text style={styles.gemologyLabel}>Crown Angle</Text>
+                    <Text style={styles.gemologyValue}>{stone.crownAngle}°</Text>
+                  </View>
+                )}
+                {stone.crownHeight && (
+                  <View style={styles.gemologyItem}>
+                    <Text style={styles.gemologyLabel}>Crown Height</Text>
+                    <Text style={styles.gemologyValue}>{stone.crownHeight}%</Text>
+                  </View>
+                )}
+                {stone.pavilionAngle && (
+                  <View style={styles.gemologyItem}>
+                    <Text style={styles.gemologyLabel}>Pavilion Angle</Text>
+                    <Text style={styles.gemologyValue}>{stone.pavilionAngle}°</Text>
+                  </View>
+                )}
+                {stone.pavilionHeight && (
+                  <View style={styles.gemologyItem}>
+                    <Text style={styles.gemologyLabel}>Pavilion Height</Text>
+                    <Text style={styles.gemologyValue}>{stone.pavilionHeight}%</Text>
+                  </View>
+                )}
+                {stone.culet && (
+                  <View style={styles.gemologyItem}>
+                    <Text style={styles.gemologyLabel}>Culet</Text>
+                    <Text style={styles.gemologyValue}>{stone.culet}</Text>
+                  </View>
+                )}
+              </View>
+            </View>
           </View>
         )}
 
@@ -538,14 +781,14 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  loadingContainer: {
+  mediaLoadingContainer: {
     width: '100%',
     height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
     gap: 12,
   },
-  loadingText: {
+  mediaLoadingText: {
     fontSize: 14,
     marginTop: 8,
   },
@@ -835,5 +1078,61 @@ const styles = StyleSheet.create({
   fullScreenImage: {
     width: '100%',
     height: '100%',
+  },
+  // Toggle Button Styles
+  toggleButton: {
+    padding: 14,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(6, 169, 234, 0.3)',
+    alignItems: 'center',
+    backgroundColor: 'transparent',
+  },
+  toggleButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#06a9ea',
+  },
+  advancedGemologyButton: {
+    borderColor: 'rgba(147, 51, 234, 0.3)',
+  },
+  advancedGemologyButtonText: {
+    color: '#9333ea',
+  },
+  // Advanced Gemology Panel Styles
+  advancedGemologyPanel: {
+    backgroundColor: 'rgba(147, 51, 234, 0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(147, 51, 234, 0.2)',
+    borderRadius: 12,
+    padding: 16,
+  },
+  gemologySubtitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#9333ea',
+    marginBottom: 12,
+    letterSpacing: 0.3,
+  },
+  gemologyGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  gemologyItem: {
+    width: '47%',
+    backgroundColor: '#fff',
+    padding: 10,
+    borderRadius: 8,
+  },
+  gemologyLabel: {
+    fontSize: 11,
+    color: '#94a3b8',
+    marginBottom: 4,
+  },
+  gemologyValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1e293b',
   },
 });

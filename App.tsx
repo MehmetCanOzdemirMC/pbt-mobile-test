@@ -13,6 +13,7 @@ import { initializeFirebaseAppCheck } from './config/appCheck';
 import { initializeSentry, setSentryUser } from './config/sentry';
 // import { useNotifications } from './hooks/useNotifications'; // Disabled for Expo Go
 import OnboardingScreen from './screens/OnboardingScreen';
+import { trackLogin, setAnalyticsUserId } from './services/analyticsService';
 
 // Initialize security and monitoring on app startup
 initializeSentry();
@@ -564,7 +565,12 @@ export default function App() {
 
     setLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+
+      // Track login in analytics
+      trackLogin('email');
+      setAnalyticsUserId(userCredential.user.uid);
+
       Alert.alert('Başarılı', 'Giriş yapıldı!');
     } catch (error: any) {
       console.error('Login error:', error);

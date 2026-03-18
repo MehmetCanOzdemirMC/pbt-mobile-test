@@ -2,7 +2,6 @@ import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
-import { getAnalytics, Analytics } from 'firebase/analytics';
 import { Platform } from 'react-native';
 
 const firebaseConfig = {
@@ -23,18 +22,24 @@ export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
 
-// Initialize Firebase Analytics (only works on web)
-// For React Native, analytics is mocked in utils/tracking/analytics.js
-let analytics: Analytics | null = null;
+// Initialize Firebase Analytics
+// For React Native (iOS/Android): use @react-native-firebase/analytics
+// For Web: use firebase/analytics
+let analytics: any = null;
+
 try {
   if (Platform.OS === 'web') {
+    const { getAnalytics } = require('firebase/analytics');
     analytics = getAnalytics(app);
-    console.log('✅ Firebase Analytics initialized');
+    console.log('✅ Firebase Analytics initialized (Web)');
   } else {
-    console.log('⚠️ Firebase Analytics skipped (React Native - using mock)');
+    // For React Native, use @react-native-firebase/analytics
+    const rnAnalytics = require('@react-native-firebase/analytics').default;
+    analytics = rnAnalytics();
+    console.log('✅ Firebase Analytics initialized (React Native)');
   }
 } catch (error) {
-  console.log('⚠️ Firebase Analytics not available');
+  console.error('⚠️ Firebase Analytics initialization error:', error);
 }
 
 export { analytics };

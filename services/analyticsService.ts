@@ -1,11 +1,27 @@
 /**
- * Firebase Analytics Service for React Native
+ * Firebase Analytics Service for React Native & Web
  * Equivalent to GA4 tracking in web app
  * Tracks user behavior, e-commerce events, and custom events
+ *
+ * Supports both:
+ * - Web: firebase/analytics
+ * - React Native: @react-native-firebase/analytics
  */
 
-import { logEvent, setUserId, setUserProperties } from 'firebase/analytics';
+import { Platform } from 'react-native';
 import { analytics } from '../config/firebase';
+
+// Web Firebase Analytics imports (conditional)
+let webLogEvent: any;
+let webSetUserId: any;
+let webSetUserProperties: any;
+
+if (Platform.OS === 'web' && analytics) {
+  const webAnalytics = require('firebase/analytics');
+  webLogEvent = webAnalytics.logEvent;
+  webSetUserId = webAnalytics.setUserId;
+  webSetUserProperties = webAnalytics.setUserProperties;
+}
 
 /**
  * Track a screen view
@@ -16,10 +32,18 @@ export const trackScreenView = (screenName: string, screenClass?: string) => {
   if (!analytics) return;
 
   try {
-    logEvent(analytics, 'screen_view', {
-      firebase_screen: screenName,
-      firebase_screen_class: screenClass || screenName,
-    });
+    if (Platform.OS === 'web') {
+      webLogEvent(analytics, 'screen_view', {
+        firebase_screen: screenName,
+        firebase_screen_class: screenClass || screenName,
+      });
+    } else {
+      // React Native Firebase Analytics
+      analytics.logEvent('screen_view', {
+        screen_name: screenName,
+        screen_class: screenClass || screenName,
+      });
+    }
     console.log(`📊 Analytics: screen_view - ${screenName}`);
   } catch (error) {
     console.error('Analytics error:', error);
@@ -34,9 +58,11 @@ export const trackSignUp = (method: string) => {
   if (!analytics) return;
 
   try {
-    logEvent(analytics, 'sign_up', {
-      method,
-    });
+    if (Platform.OS === 'web') {
+      webLogEvent(analytics, 'sign_up', { method });
+    } else {
+      analytics.logEvent('sign_up', { method });
+    }
     console.log(`📊 Analytics: sign_up - ${method}`);
   } catch (error) {
     console.error('Analytics error:', error);
@@ -51,9 +77,11 @@ export const trackLogin = (method: string) => {
   if (!analytics) return;
 
   try {
-    logEvent(analytics, 'login', {
-      method,
-    });
+    if (Platform.OS === 'web') {
+      webLogEvent(analytics, 'login', { method });
+    } else {
+      analytics.logEvent('login', { method });
+    }
     console.log(`📊 Analytics: login - ${method}`);
   } catch (error) {
     console.error('Analytics error:', error);
@@ -68,9 +96,11 @@ export const trackSearch = (searchTerm: string) => {
   if (!analytics) return;
 
   try {
-    logEvent(analytics, 'search', {
-      search_term: searchTerm,
-    });
+    if (Platform.OS === 'web') {
+      webLogEvent(analytics, 'search', { search_term: searchTerm });
+    } else {
+      analytics.logEvent('search', { search_term: searchTerm });
+    }
     console.log(`📊 Analytics: search - ${searchTerm}`);
   } catch (error) {
     console.error('Analytics error:', error);
@@ -91,7 +121,7 @@ export const trackViewItem = (item: {
   if (!analytics) return;
 
   try {
-    logEvent(analytics, 'view_item', {
+    const eventParams = {
       currency: item.currency || 'USD',
       value: item.price || 0,
       items: [
@@ -102,7 +132,13 @@ export const trackViewItem = (item: {
           price: item.price || 0,
         },
       ],
-    });
+    };
+
+    if (Platform.OS === 'web') {
+      webLogEvent(analytics, 'view_item', eventParams);
+    } else {
+      analytics.logEvent('view_item', eventParams);
+    }
     console.log(`📊 Analytics: view_item - ${item.item_name}`);
   } catch (error) {
     console.error('Analytics error:', error);
@@ -124,7 +160,7 @@ export const trackAddToCart = (item: {
   if (!analytics) return;
 
   try {
-    logEvent(analytics, 'add_to_cart', {
+    const eventParams = {
       currency: item.currency || 'USD',
       value: (item.price || 0) * (item.quantity || 1),
       items: [
@@ -136,7 +172,13 @@ export const trackAddToCart = (item: {
           quantity: item.quantity || 1,
         },
       ],
-    });
+    };
+
+    if (Platform.OS === 'web') {
+      webLogEvent(analytics, 'add_to_cart', eventParams);
+    } else {
+      analytics.logEvent('add_to_cart', eventParams);
+    }
     console.log(`📊 Analytics: add_to_cart - ${item.item_name}`);
   } catch (error) {
     console.error('Analytics error:', error);
@@ -158,7 +200,7 @@ export const trackRemoveFromCart = (item: {
   if (!analytics) return;
 
   try {
-    logEvent(analytics, 'remove_from_cart', {
+    const eventParams = {
       currency: item.currency || 'USD',
       value: (item.price || 0) * (item.quantity || 1),
       items: [
@@ -170,7 +212,13 @@ export const trackRemoveFromCart = (item: {
           quantity: item.quantity || 1,
         },
       ],
-    });
+    };
+
+    if (Platform.OS === 'web') {
+      webLogEvent(analytics, 'remove_from_cart', eventParams);
+    } else {
+      analytics.logEvent('remove_from_cart', eventParams);
+    }
     console.log(`📊 Analytics: remove_from_cart - ${item.item_name}`);
   } catch (error) {
     console.error('Analytics error:', error);
@@ -194,11 +242,17 @@ export const trackBeginCheckout = (
   if (!analytics) return;
 
   try {
-    logEvent(analytics, 'begin_checkout', {
+    const eventParams = {
       currency: 'USD',
       value,
       items,
-    });
+    };
+
+    if (Platform.OS === 'web') {
+      webLogEvent(analytics, 'begin_checkout', eventParams);
+    } else {
+      analytics.logEvent('begin_checkout', eventParams);
+    }
     console.log(`📊 Analytics: begin_checkout - $${value}`);
   } catch (error) {
     console.error('Analytics error:', error);
@@ -224,12 +278,18 @@ export const trackPurchase = (
   if (!analytics) return;
 
   try {
-    logEvent(analytics, 'purchase', {
+    const eventParams = {
       transaction_id: transactionId,
       currency: 'USD',
       value,
       items,
-    });
+    };
+
+    if (Platform.OS === 'web') {
+      webLogEvent(analytics, 'purchase', eventParams);
+    } else {
+      analytics.logEvent('purchase', eventParams);
+    }
     console.log(`📊 Analytics: purchase - ${transactionId} ($${value})`);
   } catch (error) {
     console.error('Analytics error:', error);
@@ -248,7 +308,11 @@ export const trackCustomEvent = (
   if (!analytics) return;
 
   try {
-    logEvent(analytics, eventName as any, params);
+    if (Platform.OS === 'web') {
+      webLogEvent(analytics, eventName as any, params);
+    } else {
+      analytics.logEvent(eventName, params || {});
+    }
     console.log(`📊 Analytics: ${eventName}`, params);
   } catch (error) {
     console.error('Analytics error:', error);
@@ -264,7 +328,11 @@ export const setAnalyticsUserId = (userId: string | null) => {
 
   try {
     if (userId) {
-      setUserId(analytics, userId);
+      if (Platform.OS === 'web') {
+        webSetUserId(analytics, userId);
+      } else {
+        analytics.setUserId(userId);
+      }
       console.log(`📊 Analytics: User ID set - ${userId}`);
     }
   } catch (error) {
@@ -280,7 +348,11 @@ export const setAnalyticsUserProperties = (properties: Record<string, any>) => {
   if (!analytics) return;
 
   try {
-    setUserProperties(analytics, properties);
+    if (Platform.OS === 'web') {
+      webSetUserProperties(analytics, properties);
+    } else {
+      analytics.setUserProperties(properties);
+    }
     console.log('📊 Analytics: User properties set', properties);
   } catch (error) {
     console.error('Analytics error:', error);

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { doc, setDoc, getDoc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { db, auth } from '../config/firebase';
+import { trackRemoveFromCart } from '../services/analyticsService';
 
 export interface CartItem {
   id: string;
@@ -128,6 +129,16 @@ export const useCartStore = create<CartState>((set, get) => ({
     try {
       const item = get().items.find(i => i.id === stoneId);
       if (!item) return;
+
+      // Track remove from cart in analytics
+      trackRemoveFromCart({
+        item_id: item.id,
+        item_name: `${item.shape} ${item.carat}ct ${item.color} ${item.clarity}`,
+        item_category: 'Diamond',
+        price: item.totalPrice,
+        quantity: 1,
+        currency: 'USD',
+      });
 
       // Update local state
       set((state) => ({
